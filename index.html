@@ -280,18 +280,25 @@
 
         <!-- Custom Categories (UI) -->
         <div class="card p-4 sm:p-4 mb-4">
-          <div class="flex items-center justify-between gap-3 mb-3">
-            <p class="text-sm font-semibold text-[var(--ink)]">Custom categories</p>
-            <span class="text-[11px] text-gray-500">Adds show up instantly</span>
+          <button id="toggleCustomCats" type="button" class="w-full flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-[var(--ink)]">Custom categories</p>
+              <p class="text-[11px] text-gray-500 mt-0.5" id="customCatsSubtitle">Adds show up instantly</p>
+            </div>
+            <span id="toggleCustomCatsIcon" class="text-gray-400">▾</span>
+          </button>
+
+          <div id="customCatsBody" class="mt-3">
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_140px_90px] gap-3">
+              <input id="newCatName" type="text" placeholder="Category name" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+              <input id="newCatColor" type="color" value="#2F8F6F" class="w-full h-[44px] bg-transparent border border-gray-200 rounded-lg p-1">
+              <button id="addCatBtn" class="btn-primary text-white text-sm font-semibold px-4 py-2.5 rounded-lg">Add</button>
+            </div>
+            <p id="customCatHint" class="text-[11px] text-gray-500 mt-2">Tip: new categories appear instantly. Hover a category below to delete it — deleting is optional and always asks you to confirm first.</p>
+            <p class="text-[11px] text-gray-500 mt-2">Percents are automatically normalized to 100% for user-friendly budgeting.</p>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-[1fr_140px_90px] gap-3">
-            <input id="newCatName" type="text" placeholder="Category name" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
-            <input id="newCatColor" type="color" value="#2F8F6F" class="w-full h-[44px] bg-transparent border border-gray-200 rounded-lg p-1">
-            <button id="addCatBtn" class="btn-primary text-white text-sm font-semibold px-4 py-2.5 rounded-lg">Add</button>
-          </div>
-          <p id="customCatHint" class="text-[11px] text-gray-500 mt-2">Tip: new categories appear instantly. Hover a category below to delete it — deleting is optional and always asks you to confirm first.</p>
-          <p class="text-[11px] text-gray-500 mt-2">Percents are automatically normalized to 100% for user-friendly budgeting.</p>
         </div>
+
 
         <div id="categoryList" class="space-y-3"></div>
       </div>
@@ -1494,7 +1501,9 @@
     data.categories.push({
       id: uid(),
       name,
-      percent: 15,
+      // Lower starting percent so custom categories don’t immediately dominate;
+      // normalizeCategories() will bring totals back to 100%.
+      percent: 10,
       color,
     });
 
@@ -1504,6 +1513,7 @@
     newCatName.value = '';
     showToast(`"${name}" category added.`, 'success');
   }
+
 
   if(addCatBtn){
     addCatBtn.addEventListener('click', (e) => {
