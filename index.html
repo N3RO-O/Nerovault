@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nerovault — Free Budget &amp; Savings Tracker</title>
+<meta name="description" content="Nerovault is a free budget and savings tracker. Log income and expenses, schedule bills, and grow savings goals — no sign-up, no cost, your data stays on your device.">
+<meta name="theme-color" content="#2F8F6F">
+<meta property="og:title" content="Nerovault — Free Budget & Savings Tracker">
+<meta property="og:description" content="Track spending, schedule bills, and grow your savings — completely free, no account needed.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 4 L34 9.5 V19 C34 27.5 28 33.5 20 36 C12 33.5 6 27.5 6 19 V9.5 Z' fill='%232F8F6F'/%3E%3Cpath d='M14 20.5 L18 24.5 L26 15.5' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --sage:#2F8F6F;
+    --sage-soft:#E7F3EE;
+    --lavender:#8073D6;
+    --lavender-soft:#EEECFB;
+    --amber:#C9871F;
+    --amber-soft:#FBF1DF;
+    --danger:#D6553F;
+    --danger-soft:#FBEAE6;
+    --ink:#1E2328;
+    --bg:#F5F6F3;
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    background:var(--bg);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    color:var(--ink);
+  }
+  .mono{ font-family:'JetBrains Mono',monospace; }
+
+  .bg-wash{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .bg-wash::before, .bg-wash::after{
+    content:''; position:absolute; width:50vw; height:50vw; border-radius:9999px; filter:blur(100px);
+  }
+  .bg-wash::before{ top:-18vw; right:-12vw; background:var(--sage); opacity:0.07; }
+  .bg-wash::after{ bottom:-20vw; left:-12vw; background:var(--lavender); opacity:0.07; }
+
+  .card{
+    background:#FFFFFF;
+    border:1px solid #E7E5DF;
+    border-radius:18px;
+    box-shadow:0 1px 2px rgba(30,35,40,0.04), 0 8px 20px -12px rgba(30,35,40,0.08);
+  }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:#DCD9D1; border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover{ background:#C9C5BB; }
+
+  .panel-scroll{ max-height:460px; overflow-y:auto; }
+
+  .btn-primary{
+    background:var(--sage);
+    box-shadow:0 6px 16px -6px rgba(47,143,111,0.5);
+  }
+  .btn-primary:hover{ background:#287A5F; }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  input[type="number"]{ -moz-appearance:textfield; }
+
+  .fade-in{ animation:fadeIn 0.3s ease both; }
+  @keyframes fadeIn{ from{ opacity:0; transform:translateY(5px);} to{ opacity:1; transform:translateY(0);} }
+
+  input:focus, button:focus, select:focus{ outline:2px solid rgba(47,143,111,0.4); outline-offset:1px; }
+
+.modal-backdrop{
+  background:rgba(30,35,40,0.35);
+  backdrop-filter:blur(3px);
+  opacity:0;
+  transition:opacity 0.2s ease-in-out;
+}
+.modal-backdrop.is-open{ opacity:1; }
+
+  .tab-btn{ transition:all 0.15s ease; }
+  .tab-btn[data-active="true"]{ background:#FFFFFF; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+  .tab-btn[data-active="false"]{ color:#8A8578; }
+
+  .field-tab[data-active="true"]{ background:var(--sage); color:#fff; }
+  .field-tab[data-active="false"]{ background:#F2F0EA; color:#6B6659; }
+</style>
+</head>
+<body class="min-h-screen relative">
+
+<div class="bg-wash"></div>
+
+<div class="relative z-10 min-h-screen flex flex-col">
+
+  <!-- HEADER -->
+  <header class="px-5 sm:px-8 py-5 border-b border-black/5">
+    <div class="max-w-[1400px] mx-auto flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+          <path d="M20 4 L34 9.5 V19 C34 27.5 28 33.5 20 36 C12 33.5 6 27.5 6 19 V9.5 Z" stroke="#2F8F6F" stroke-width="1.6" fill="#E7F3EE"/>
+          <path d="M14 20.5 L18 24.5 L26 15.5" stroke="#2F8F6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl sm:text-2xl font-extrabold text-[var(--ink)] leading-none tracking-tight">Nerovault</h1>
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:var(--sage-soft); color:#1F6B50;">100% Free</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">Budget your money and grow your savings — no sign-up, no cost</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 flex-wrap">
+        <div id="liveDate" class="text-sm text-gray-500 hidden sm:block"></div>
+        <button id="openBackupBtn" class="text-gray-400 hover:text-[var(--ink)] transition-colors p-2 rounded-lg hover:bg-black/5" title="Back up or restore your data">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button id="openAddBtn" class="btn-primary text-white text-sm font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2 transition-colors">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+          Add
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 px-5 sm:px-8 py-8 max-w-[1400px] mx-auto w-full">
+
+    <!-- OVERSPEND BANNER -->
+    <div id="overspendBanner" class="hidden mb-6 rounded-xl border px-4 py-3 flex items-start gap-3" style="background:var(--danger-soft); border-color:#EFC9C0;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" class="mt-0.5 flex-shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+      <p class="text-sm" style="color:#9C4230;"><span id="overspendAmount" class="font-semibold"></span> more is committed than you've earned this month. Consider adjusting a bill, category, or goal.</p>
+    </div>
+
+    <!-- STATS ROW -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div class="card p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-semibold text-gray-500 tracking-wide">AVAILABLE TO SPEND</span>
+        </div>
+        <div id="availableStat" class="text-xl sm:text-2xl font-bold mono" style="color:var(--sage);">₱0.00</div>
+        <p class="text-[11px] text-gray-500 mt-1.5">Free money, nothing owed</p>
+      </div>
+
+      <div class="card p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-semibold text-gray-500 tracking-wide">UPCOMING BILLS</span>
+        </div>
+        <div id="upcomingStat" class="text-xl sm:text-2xl font-bold mono" style="color:var(--amber);">₱0.00</div>
+        <p class="text-[11px] text-gray-500 mt-1.5">Set aside, not yet paid</p>
+      </div>
+
+      <div class="card p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-semibold text-gray-500 tracking-wide">TOTAL SAVED</span>
+        </div>
+        <div id="savedStat" class="text-xl sm:text-2xl font-bold mono" style="color:var(--lavender);">₱0.00</div>
+        <p class="text-[11px] text-gray-500 mt-1.5">Toward your goals</p>
+      </div>
+
+      <div class="card p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-semibold text-gray-500 tracking-wide">DAILY BUDGET</span>
+        </div>
+        <div id="dailyStat" class="text-xl sm:text-2xl font-bold mono" style="color:var(--sage);">₱0.00</div>
+        <p id="dailyStatSub" class="text-[11px] text-gray-500 mt-1.5">Left this month</p>
+      </div>
+    </section>
+
+    <!-- MAIN GRID -->
+    <section class="grid grid-cols-1 lg:grid-cols-[1fr_0.8fr_1.1fr] gap-5">
+
+    <!-- LEFT: CATEGORIES -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-[var(--ink)]">Budget categories</h2>
+          <div class="flex items-center gap-1.5 text-xs text-gray-500">
+            <span>Monthly budget</span>
+            <span class="text-gray-400">₱</span>
+            <input id="capacityInput" type="number" min="0" step="100" class="w-20 bg-transparent border-b border-gray-300 text-right mono text-gray-700 outline-none" value="20000">
+          </div>
+        </div>
+
+        <!-- Custom Categories (UI) -->
+        <div class="card p-4 sm:p-4 mb-4">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <p class="text-sm font-semibold text-[var(--ink)]">Custom categories</p>
+            <span class="text-[11px] text-gray-500">Adds show up instantly</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-[1fr_140px_90px] gap-3">
+            <input id="newCatName" type="text" placeholder="Category name" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+            <input id="newCatColor" type="color" value="#2F8F6F" class="w-full h-[44px] bg-transparent border border-gray-200 rounded-lg p-1">
+            <button id="addCatBtn" class="btn-primary text-white text-sm font-semibold px-4 py-2.5 rounded-lg">Add</button>
+          </div>
+          <p id="customCatHint" class="text-[11px] text-gray-500 mt-2">Tip: custom categories appear immediately. (Delete optional)</p>
+          <p class="text-[11px] text-gray-500 mt-2">Percents are automatically normalized to 100% for user-friendly budgeting.</p>
+        </div>
+
+        <div id="categoryList" class="space-y-3"></div>
+      </div>
+
+      <!-- CENTER: CHART -->
+      <div>
+        <h2 class="text-sm font-semibold text-[var(--ink)] mb-3">Where your money goes</h2>
+        <div class="card p-5 flex flex-col items-center">
+          <div class="relative w-full max-w-[220px] aspect-square">
+            <canvas id="vaultChart"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span class="text-[10px] text-gray-400 tracking-widest">INCOME</span>
+              <span id="chartCenterValue" class="text-base font-bold text-[var(--ink)] mono">₱0</span>
+            </div>
+          </div>
+          <div class="w-full mt-5 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="flex items-center gap-2 text-gray-600"><span class="w-2.5 h-2.5 rounded-full inline-block" style="background:#94A3B8"></span>Already spent</span>
+              <span id="legendSpent" class="mono text-gray-700">₱0.00</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="flex items-center gap-2 text-gray-600"><span class="w-2.5 h-2.5 rounded-full inline-block" style="background:var(--amber)"></span>Committed</span>
+              <span id="legendCommitted" class="mono text-gray-700">₱0.00</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="flex items-center gap-2 text-gray-600"><span class="w-2.5 h-2.5 rounded-full inline-block" style="background:var(--sage)"></span>Free to spend</span>
+              <span id="legendFree" class="mono text-gray-700">₱0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: TABS -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-[var(--ink)]">Activity</h2>
+        </div>
+        <div class="card p-3 sm:p-4">
+          <div class="flex items-center gap-1 bg-[#F2F0EA] rounded-xl p-1 mb-4">
+            <button class="tab-btn flex-1 text-xs font-semibold py-2 rounded-lg" data-tab="bills" data-active="true">Bills</button>
+            <button class="tab-btn flex-1 text-xs font-semibold py-2 rounded-lg" data-tab="goals" data-active="false">Goals</button>
+            <button class="tab-btn flex-1 text-xs font-semibold py-2 rounded-lg" data-tab="feed" data-active="false">History</button>
+          </div>
+
+          <div id="tab-bills" class="panel-scroll space-y-3 pr-1"></div>
+          <div id="tab-goals" class="hidden panel-scroll space-y-3 pr-1"></div>
+          <div id="tab-feed" class="hidden panel-scroll space-y-2.5 pr-1"></div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-black/5 px-5 sm:px-8 py-6 mt-6">
+    <div class="max-w-[1400px] mx-auto flex flex-col items-center gap-1.5 text-center">
+      <p class="text-xs text-gray-500">
+        © 2026 Nerovault. All Rights Reserved. Engineered by
+        <a href="https://tabuzoportfolio.vercel.app/" target="_blank" rel="noopener noreferrer" class="font-medium hover:underline" style="color:var(--sage);">Jonah Mark S. Tabuzo</a>.
+      </p>
+      <p class="text-[10px] text-gray-400">Secure local client-side architecture. No database footprint.</p>
+    </div>
+  </footer>
+
+</div>
+
+<!-- ADD MODAL -->
+<div id="addModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop px-4">
+  <div class="card w-full max-w-md p-6 fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-base font-semibold text-[var(--ink)]">Add something</h3>
+      <button id="closeAddBtn" class="text-gray-400 hover:text-gray-700 transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-4 gap-1.5 mb-5">
+      <button class="field-tab text-xs font-semibold py-2 rounded-lg" data-ftab="income" data-active="true">Income</button>
+      <button class="field-tab text-xs font-semibold py-2 rounded-lg" data-ftab="expense" data-active="false">Expense</button>
+      <button class="field-tab text-xs font-semibold py-2 rounded-lg" data-ftab="bill" data-active="false">Bill</button>
+      <button class="field-tab text-xs font-semibold py-2 rounded-lg" data-ftab="goal" data-active="false">Goal</button>
+    </div>
+
+    <form id="addForm" class="space-y-4">
+
+      <!-- INCOME FIELDS -->
+      <div id="fields-income" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">Where's it from?</label>
+          <input id="incSource" type="text" placeholder="e.g. Allowance, Part-time job" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Amount (₱)</label>
+            <input id="incAmount" type="number" min="1" step="1" placeholder="0.00" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Date received</label>
+            <input id="incDate" type="date" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPENSE FIELDS -->
+      <div id="fields-expense" class="hidden space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">What was it for?</label>
+          <input id="expTitle" type="text" placeholder="e.g. Jeepney fare, Lunch" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">Category</label>
+          <select id="expCategory" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Amount (₱)</label>
+            <input id="expAmount" type="number" min="1" step="1" placeholder="0.00" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Date</label>
+            <input id="expDate" type="date" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+          </div>
+        </div>
+      </div>
+
+      <!-- BILL FIELDS -->
+      <div id="fields-bill" class="hidden space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">What's this bill?</label>
+          <input id="billTitle" type="text" placeholder="e.g. Rent, Electric bill" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">Category</label>
+          <select id="billCategory" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Amount (₱)</label>
+            <input id="billAmount" type="number" min="1" step="1" placeholder="0.00" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Due date</label>
+            <input id="billDate" type="date" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+          </div>
+        </div>
+      </div>
+
+      <!-- GOAL FIELDS -->
+      <div id="fields-goal" class="hidden space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">What are you saving for?</label>
+          <input id="goalName" type="text" placeholder="e.g. New laptop, Emergency fund" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Target (₱)</label>
+            <input id="goalTarget" type="number" min="1" step="1" placeholder="0.00" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Target date (optional)</label>
+            <input id="goalDeadline" type="date" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary w-full text-white text-sm font-semibold py-3 rounded-xl mt-2 transition-colors">Save</button>
+    </form>
+  </div>
+</div>
+
+<!-- BACKUP MODAL -->
+<div id="backupModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop px-4">
+  <div class="card w-full max-w-md p-6 fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-base font-semibold text-[var(--ink)]">Back up your data</h3>
+      <button id="closeBackupBtn" class="text-gray-400 hover:text-gray-700 transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <p class="text-xs text-gray-500 mb-5">Nerovault saves everything only in this browser. If you clear your browser data or switch devices, you'll lose it — unless you download a backup first.</p>
+
+    <div class="space-y-2.5">
+      <button id="exportBtn" class="w-full flex items-center justify-between gap-2 border border-gray-200 rounded-xl px-4 py-3 hover:bg-black/[0.02] transition-colors">
+        <span class="text-left">
+          <span class="block text-sm font-semibold text-[var(--ink)]">Download backup</span>
+          <span class="block text-[11px] text-gray-500">Saves a .json file to your device</span>
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="2"><path d="M12 5v13M6 12l6 6 6-6M5 21h14"/></svg>
+      </button>
+
+      <label class="w-full flex items-center justify-between gap-2 border border-gray-200 rounded-xl px-4 py-3 hover:bg-black/[0.02] transition-colors cursor-pointer">
+        <span class="text-left">
+          <span class="block text-sm font-semibold text-[var(--ink)]">Restore from backup</span>
+          <span class="block text-[11px] text-gray-500">Replaces what's currently on this device</span>
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lavender)" stroke-width="2"><path d="M12 19V6M6 12l6-6 6 6M5 3h14"/></svg>
+        <input id="importInput" type="file" accept="application/json" class="hidden">
+      </label>
+    </div>
+    <p id="backupMsg" class="text-xs mt-4 hidden"></p>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'nerovault_data';
+  const isoToday = () => new Date().toISOString().split('T')[0];
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+  const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const addDaysISO = (n) => { const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().split('T')[0]; };
+
+  const CATS = [
+    { id:'family',    name:'Family & Household',  percent:30, color:'#38A3A5' },
+    { id:'essential', name:'Essential Survival',   percent:30, color:'#D6553F' },
+    { id:'lifestyle', name:'Personal & Lifestyle', percent:20, color:'#C9871F' },
+    { id:'savings',   name:'Future & Savings',     percent:20, color:'#8073D6' },
+  ];
+
+  function defaultData(){
+    return {
+      budget: 20000,
+      categories: CATS,
+      income: [
+        { id: uid(), source:'Allowance',      amount:10000, date: addDaysISO(-6) },
+        { id: uid(), source:'Part-time job',  amount:8000,  date: addDaysISO(-3) },
+      ],
+      expenses: [
+        { id: uid(), title:'Groceries', category:'family',    amount:850, date: addDaysISO(-2) },
+        { id: uid(), title:'Mobile load', category:'lifestyle', amount:150, date: addDaysISO(-1) },
+      ],
+      bills: [
+        { id: uid(), title:'Electric bill',  category:'essential', amount:1800, dueDate: isoToday(),     status:'locked' },
+        { id: uid(), title:'Rent share',     category:'essential', amount:3500, dueDate: addDaysISO(9),  status:'locked' },
+        { id: uid(), title:'Internet bill',  category:'essential', amount:1500, dueDate: addDaysISO(-4), status:'paid' },
+      ],
+      goals: [
+        { id: uid(), name:'New laptop', target:30000, saved:5000, deadline: addDaysISO(120) },
+      ],
+    };
+  }
+
+  function normalizeCategories(d){
+    // User-friendly: ensure percents sum to 100%
+    if(!Array.isArray(d.categories) || d.categories.length === 0) return d;
+    const total = d.categories.reduce((s,c) => s + Number(c.percent || 0), 0);
+    if(total <= 0){
+      const even = Math.round(100 / d.categories.length);
+      d.categories.forEach(c => c.percent = even);
+      return d;
+    }
+    d.categories.forEach(c => {
+      const calculated = (Number(c.percent || 0) / total) * 100;
+      // Round to the nearest whole integer for clean display
+      c.percent = Math.round(calculated);
+    });
+    return d;
+  }
+
+
+
+  function loadData(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw){ const d = defaultData(); saveData(d); return d; }
+      const p = JSON.parse(raw);
+      if(!p.categories) p.categories = CATS;
+      if(!p.income) p.income = [];
+      if(!p.expenses) p.expenses = [];
+      if(!p.bills) p.bills = p.ledger || [];
+      if(!p.goals) p.goals = [];
+      if(typeof p.budget !== 'number') p.budget = 20000;
+
+      // Ensure percents remain user-friendly after restore
+      normalizeCategories(p);
+
+      p.bills.forEach(b => {
+        if(!b.dueDate && b.releaseDate) b.dueDate = b.releaseDate;
+        if(b.status === 'unlocked') b.status = 'ready';
+        if(b.status === 'disbursed') b.status = 'paid';
+        if(!['locked','ready','paid'].includes(b.status)) b.status = 'locked';
+      });
+      return p;
+    }catch(e){
+      const d = defaultData(); saveData(d); return d;
+    }
+  }
+  function saveData(d){ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+
+  let data = loadData();
+
+  // ---- auto time-release for bills ----
+  function runBillCheck(d){
+    const today = isoToday();
+    let changed = false;
+    d.bills.forEach(b => {
+      if(b.status === 'locked' && b.dueDate <= today){ b.status = 'ready'; changed = true; }
+    });
+    if(changed) saveData(d);
+    return changed;
+  }
+  runBillCheck(data);
+
+  // ---- derived totals ----
+  function totals(d){
+    const totalIncome = d.income.reduce((s,i) => s + Number(i.amount), 0);
+    const totalExpenses = d.expenses.reduce((s,i) => s + Number(i.amount), 0);
+    const paidBills = d.bills.filter(b => b.status === 'paid').reduce((s,i) => s + Number(i.amount), 0);
+    const upcomingBills = d.bills.filter(b => b.status !== 'paid').reduce((s,i) => s + Number(i.amount), 0);
+    const totalSaved = d.goals.reduce((s,g) => s + Number(g.saved), 0);
+    const available = totalIncome - totalExpenses - paidBills - totalSaved - upcomingBills;
+    const spent = totalExpenses + paidBills;
+    const committed = upcomingBills + totalSaved;
+    return { totalIncome, totalExpenses, paidBills, upcomingBills, totalSaved, available, spent, committed };
+  }
+
+  function daysLeftInMonth(){
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return Math.max(1, end - now.getDate() + 1);
+  }
+
+  function categorySpent(d, catId){
+    const exp = d.expenses.filter(e => e.category === catId).reduce((s,e) => s + Number(e.amount), 0);
+    const paid = d.bills.filter(b => b.category === catId && b.status === 'paid').reduce((s,b) => s + Number(b.amount), 0);
+    return exp + paid;
+  }
+
+  // ---- live date ----
+  document.getElementById('liveDate').textContent = new Date().toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  // ---- chart ----
+  let chart;
+  function renderChart(d){
+    const t = totals(d);
+    const denom = t.totalIncome > 0 ? t.totalIncome : d.budget;
+    const free = Math.max(0, t.available);
+    document.getElementById('legendSpent').textContent = peso(t.spent);
+    document.getElementById('legendCommitted').textContent = peso(t.committed);
+    document.getElementById('legendFree').textContent = peso(free);
+    document.getElementById('chartCenterValue').textContent = peso(t.totalIncome);
+
+    const dataset = (t.spent + t.committed + free) > 0 ? [t.spent, t.committed, free] : [0,0,1];
+
+    if(chart){ chart.data.datasets[0].data = dataset; chart.update(); return; }
+
+    chart = new Chart(document.getElementById('vaultChart').getContext('2d'), {
+      type:'doughnut',
+      data:{
+        labels:['Already spent','Committed','Free to spend'],
+        datasets:[{ data: dataset, backgroundColor:['#94A3B8','#C9871F','#2F8F6F'], borderColor:'#FFFFFF', borderWidth:3, hoverOffset:5 }]
+      },
+      options:{
+        cutout:'72%', responsive:true, maintainAspectRatio:true,
+        plugins:{
+          legend:{ display:false },
+          tooltip:{
+            backgroundColor:'#1E2328', padding:10,
+            titleFont:{ family:'Inter' }, bodyFont:{ family:'JetBrains Mono' },
+            callbacks:{ label:(ctx) => ' ' + ctx.label + ': ' + peso(ctx.raw) }
+          }
+        }
+      }
+    });
+  }
+
+  // ---- stats ----
+  function renderStats(d){
+    const t = totals(d);
+    document.getElementById('availableStat').textContent = peso(t.available);
+    document.getElementById('upcomingStat').textContent = peso(t.upcomingBills);
+    document.getElementById('savedStat').textContent = peso(t.totalSaved);
+
+    const days = daysLeftInMonth();
+    const daily = t.available / days;
+    const dailyEl = document.getElementById('dailyStat');
+    const dailySub = document.getElementById('dailyStatSub');
+    if(t.available < 0){
+      dailyEl.textContent = '₱0.00';
+      dailyEl.style.color = 'var(--danger)';
+      dailySub.textContent = 'Over budget';
+      dailySub.style.color = 'var(--danger)';
+      // Quick Addition: Turn the chart center text red to catch the user's eye
+      document.getElementById('chartCenterValue').style.color = 'var(--danger)';
+    } else {
+      dailyEl.textContent = peso(daily);
+      dailyEl.style.color = 'var(--sage)';
+      dailySub.textContent = days + ' days left this month';
+      dailySub.style.color = '';
+      document.getElementById('chartCenterValue').style.color = 'var(--ink)';
+    }
+
+    const banner = document.getElementById('overspendBanner');
+    if(t.available < 0){
+      banner.classList.remove('hidden');
+      document.getElementById('overspendAmount').textContent = peso(Math.abs(t.available));
+    } else {
+      banner.classList.add('hidden');
+    }
+  }
+
+  // ---- categories ----
+  function renderCategories(d){
+    const wrap = document.getElementById('categoryList');
+    wrap.innerHTML = '';
+
+    // Keep dropdowns in sync with current categories
+    const opts = d.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    document.getElementById('expCategory').innerHTML = opts;
+    document.getElementById('billCategory').innerHTML = opts;
+
+    d.categories.forEach(cat => {
+      const allocated = (d.budget * cat.percent) / 100;
+      const spent = categorySpent(d, cat.id);
+      const pct = allocated > 0 ? (spent / allocated) * 100 : 0;
+      const over = pct >= 100;
+      const warn = pct >= 90 && pct < 100;
+      const barColor = over ? 'var(--danger)' : cat.color;
+
+      const card = document.createElement('div');
+      card.className = 'card p-4 fade-in';
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full" style="background:${cat.color}"></span>
+            <span class="text-sm font-semibold text-[var(--ink)]">${cat.name}</span>
+          </div>
+          <span class="text-[11px] text-gray-400">${cat.percent}%</span>
+        </div>
+        <div class="flex items-baseline justify-between mb-2">
+          <span class="text-lg font-bold text-[var(--ink)] mono">${peso(allocated)}</span>
+          <span class="text-[11px] mono ${over ? 'font-semibold' : 'text-gray-500'}" style="${over ? 'color:var(--danger)' : ''}">${peso(spent)} used</span>
+        </div>
+        <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1.5">
+          <div class="h-full rounded-full" style="width:${Math.min(100,pct)}%; background:${barColor};"></div>
+        </div>
+        ${over ? `<p class="text-[11px] font-medium" style="color:var(--danger)">Over budget for this category</p>` : warn ? `<p class="text-[11px]" style="color:var(--amber)">Almost at your limit</p>` : `<p class="text-[11px] text-gray-400">${pct.toFixed(0)}% used</p>`}
+      `;
+      wrap.appendChild(card);
+    });
+  }
+
+  // ---- bills tab ----
+  const billStatus = {
+    locked: { label:'Not yet due', bg:'var(--amber-soft)', fg:'#8A5F14', dot:'var(--amber)' },
+    ready:  { label:'Ready to pay', bg:'var(--sage-soft)', fg:'#1F6B50', dot:'var(--sage)' },
+    paid:   { label:'Paid', bg:'#F2F0EA', fg:'#6B6659', dot:'#94A3B8' },
+  };
+  function catName(d, id){ const c = d.categories.find(c => c.id === id); return c ? c.name : id; }
+  function catColor(d, id){ const c = d.categories.find(c => c.id === id); return c ? c.color : '#94A3B8'; }
+  function escapeHtml(str){ const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+  function fmtDate(iso){ return new Date(iso + 'T00:00:00').toLocaleDateString('en-PH', { month:'short', day:'numeric' }); }
+
+  function renderBills(d){
+    const wrap = document.getElementById('tab-bills');
+    wrap.innerHTML = '';
+    const sorted = [...d.bills].sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+    if(sorted.length === 0){
+      wrap.innerHTML = `<p class="text-center text-sm text-gray-400 py-10">No bills yet.<br><span class="text-xs">Tap Add → Bill to schedule one.</span></p>`;
+      return;
+    }
+    sorted.forEach(b => {
+      const sc = billStatus[b.status] || billStatus.locked;
+      const row = document.createElement('div');
+      row.className = 'rounded-xl border border-gray-100 p-3.5 fade-in';
+      row.innerHTML = `
+        <div class="flex items-start justify-between gap-3 mb-2">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-[var(--ink)] truncate">${escapeHtml(b.title)}</p>
+            <p class="text-[11px] text-gray-400 flex items-center gap-1.5 mt-0.5">
+              <span class="w-1.5 h-1.5 rounded-full inline-block" style="background:${catColor(d,b.category)}"></span>${catName(d,b.category)}
+            </p>
+          </div>
+          <span class="text-sm font-bold text-[var(--ink)] mono whitespace-nowrap">${peso(b.amount)}</span>
+        </div>
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-semibold px-2 py-1 rounded-md flex items-center gap-1.5" style="background:${sc.bg}; color:${sc.fg};">
+              <span class="w-1.5 h-1.5 rounded-full inline-block" style="background:${sc.dot}"></span>${sc.label}
+            </span>
+            <span class="text-[11px] text-gray-400">${fmtDate(b.dueDate)}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            ${b.status === 'locked' ? `<button data-action="force" data-id="${b.id}" class="text-[10px] font-medium px-2.5 py-1.5 rounded-md" style="background:var(--sage-soft); color:#1F6B50;">Make available</button>` : ''}
+            ${b.status === 'ready' ? `<button data-action="pay" data-id="${b.id}" class="text-[10px] font-medium px-2.5 py-1.5 rounded-md" style="background:#F2F0EA; color:#6B6659;">Mark as paid</button>` : ''}
+            <button data-action="delbill" data-id="${b.id}" class="text-gray-400 hover:text-[var(--danger)] transition-colors px-1" title="Remove">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+            </button>
+          </div>
+        </div>
+      `;
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---- goals tab ----
+  function renderGoals(d){
+    const wrap = document.getElementById('tab-goals');
+    wrap.innerHTML = '';
+    if(d.goals.length === 0){
+      wrap.innerHTML = `<p class="text-center text-sm text-gray-400 py-10">No savings goals yet.<br><span class="text-xs">Tap Add → Goal to start one.</span></p>`;
+      return;
+    }
+    d.goals.forEach(g => {
+      const pct = g.target > 0 ? Math.min(100, (g.saved / g.target) * 100) : 0;
+      const reached = g.saved >= g.target;
+      const card = document.createElement('div');
+      card.className = 'rounded-xl border border-gray-100 p-3.5 fade-in';
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-3 mb-2">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-[var(--ink)] truncate">${escapeHtml(g.name)}</p>
+            ${g.deadline ? `<p class="text-[11px] text-gray-400 mt-0.5">Target: ${fmtDate(g.deadline)}</p>` : ''}
+          </div>
+          <button data-action="delgoal" data-id="${g.id}" class="text-gray-400 hover:text-[var(--danger)] transition-colors px-1" title="Remove">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+          </button>
+        </div>
+        <div class="flex items-baseline justify-between mb-1.5">
+          <span class="text-sm font-bold text-[var(--ink)] mono">${peso(g.saved)}</span>
+          <span class="text-[11px] text-gray-400 mono">of ${peso(g.target)}</span>
+        </div>
+        <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2.5">
+          <div class="h-full rounded-full" style="width:${pct}%; background:var(--lavender);"></div>
+        </div>
+        ${reached
+          ? `<span class="text-[11px] font-medium" style="color:var(--sage)">Goal reached! 🎉</span>`
+          : `<div class="flex items-center gap-2" id="addfunds-${g.id}">
+               <input type="number" min="1" placeholder="Amount" class="w-24 text-xs border border-gray-200 rounded-md px-2 py-1.5 outline-none focus:border-[var(--lavender)]" id="addfunds-input-${g.id}">
+               <button data-action="addfunds" data-id="${g.id}" class="text-[10px] font-medium px-2.5 py-1.5 rounded-md text-white" style="background:var(--lavender);">Add funds</button>
+             </div>`
+        }
+      `;
+      wrap.appendChild(card);
+    });
+  }
+
+  // ---- history tab ----
+  function renderFeed(d){
+    const wrap = document.getElementById('tab-feed');
+    wrap.innerHTML = '';
+    const items = [
+      ...d.income.map(i => ({ type:'income', id:i.id, title:i.source, amount:i.amount, date:i.date })),
+      ...d.expenses.map(e => ({ type:'expense', id:e.id, title:e.title, amount:e.amount, date:e.date, category:e.category })),
+      ...d.bills.filter(b => b.status === 'paid').map(b => ({ type:'bill', id:b.id, title:b.title, amount:b.amount, date:b.dueDate, category:b.category })),
+    ].sort((a,b) => b.date.localeCompare(a.date));
+
+    if(items.length === 0){
+      wrap.innerHTML = `<p class="text-center text-sm text-gray-400 py-10">Nothing logged yet.</p>`;
+      return;
+    }
+
+    items.forEach(it => {
+      const isIncome = it.type === 'income';
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2.5 fade-in';
+      row.innerHTML = `
+        <div class="min-w-0 flex items-center gap-2.5">
+          <span class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:${isIncome ? 'var(--sage-soft)' : '#F2F0EA'};">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isIncome ? 'var(--sage)' : '#8A8578'}" stroke-width="2.4">
+              ${isIncome ? '<path d="M12 19V5M5 12l7-7 7 7"/>' : '<path d="M12 5v14M5 12l7 7 7-7"/>'}
+            </svg>
+          </span>
+          <div class="min-w-0">
+            <p class="text-xs font-semibold text-[var(--ink)] truncate">${escapeHtml(it.title)}</p>
+            <p class="text-[10px] text-gray-400">${fmtDate(it.date)}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold mono whitespace-nowrap" style="color:${isIncome ? 'var(--sage)' : 'var(--ink)'}">${isIncome ? '+' : '−'}${peso(it.amount)}</span>
+          ${it.type !== 'bill' ? `<button data-action="del${it.type}" data-id="${it.id}" class="text-gray-300 hover:text-[var(--danger)] transition-colors" title="Remove">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>` : ''}
+        </div>
+      `;
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---- master render ----
+  function renderAll(){
+    renderStats(data);
+    renderCategories(data);
+    renderBills(data);
+    renderGoals(data);
+    renderFeed(data);
+    renderChart(data);
+  }
+  renderAll();
+
+  // ---- capacity input ----
+  const capacityInput = document.getElementById('capacityInput');
+  capacityInput.value = data.budget;
+  capacityInput.addEventListener('change', () => {
+    let v = parseFloat(capacityInput.value);
+    if(isNaN(v) || v < 0) v = 0;
+    data.budget = v;
+    saveData(data);
+    renderAll();
+  });
+
+  // ---- tab switching (right panel) ----
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.dataset.active = 'false');
+      btn.dataset.active = 'true';
+      ['bills','goals','feed'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== btn.dataset.tab);
+      });
+    });
+  });
+
+  // ---- bills/goals/feed actions ----
+  function handleDelegatedClick(e){
+    const btn = e.target.closest('button[data-action]');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
+
+    if(action === 'force'){ const b = data.bills.find(x=>x.id===id); if(b) b.status='ready'; }
+    else if(action === 'pay'){ const b = data.bills.find(x=>x.id===id); if(b) b.status='paid'; }
+    else if(action === 'delbill'){ data.bills = data.bills.filter(x=>x.id!==id); }
+    else if(action === 'delgoal'){ data.goals = data.goals.filter(x=>x.id!==id); }
+    else if(action === 'delincome'){ data.income = data.income.filter(x=>x.id!==id); }
+    else if(action === 'delexpense'){ data.expenses = data.expenses.filter(x=>x.id!==id); }
+    else if(action === 'addfunds'){
+      const input = document.getElementById('addfunds-input-' + id);
+      const amt = parseFloat(input.value);
+      if(!amt || amt <= 0) return;
+      const g = data.goals.find(x=>x.id===id);
+      if(g) g.saved = Number(g.saved) + amt;
+    } else return;
+
+    saveData(data);
+    renderAll();
+  }
+  document.getElementById('tab-bills').addEventListener('click', handleDelegatedClick);
+  document.getElementById('tab-goals').addEventListener('click', handleDelegatedClick);
+  document.getElementById('tab-feed').addEventListener('click', handleDelegatedClick);
+
+  // ---- add modal ----
+  const modal = document.getElementById('addModal');
+  const openBtn = document.getElementById('openAddBtn');
+  const closeBtn = document.getElementById('closeAddBtn');
+  const form = document.getElementById('addForm');
+  let activeFieldTab = 'income';
+
+  function populateCategorySelects(){
+    const opts = data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    const exp = document.getElementById('expCategory');
+    const bill = document.getElementById('billCategory');
+    if(exp) exp.innerHTML = opts;
+    if(bill) bill.innerHTML = opts;
+  }
+
+  function setFieldTab(tab){
+    activeFieldTab = tab;
+    document.querySelectorAll('.field-tab').forEach(b => b.dataset.active = (b.dataset.ftab === tab) ? 'true' : 'false');
+    ['income','expense','bill','goal'].forEach(t => {
+      document.getElementById('fields-' + t).classList.toggle('hidden', t !== tab);
+    });
+  }
+  document.querySelectorAll('.field-tab').forEach(btn => btn.addEventListener('click', () => setFieldTab(btn.dataset.ftab)));
+
+  // ---- custom category UI ----
+  const addCatBtn = document.getElementById('addCatBtn');
+  const newCatName = document.getElementById('newCatName');
+  const newCatColor = document.getElementById('newCatColor');
+
+  // Ensure initial dropdowns and category list reflect any restored categories
+  // (also keeps UI consistent even if user never opens the Add modal)
+  if(addCatBtn){
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', () => renderAll());
+    } else {
+      renderAll();
+    }
+  }
+
+
+  function addCustomCategory(){
+    const name = (newCatName && newCatName.value ? newCatName.value : '').trim();
+    const color = (newCatColor && newCatColor.value) ? newCatColor.value : '#2F8F6F';
+    if(!name) return;
+
+    data.categories.push({
+      id: uid(),
+      name,
+      percent: 15,
+      color,
+    });
+
+    normalizeCategories(data);
+    saveData(data);
+    renderAll();
+    newCatName.value = '';
+  }
+
+  if(addCatBtn){
+    addCatBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      addCustomCategory();
+    });
+  }
+  if(newCatName){
+    newCatName.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        addCustomCategory();
+      }
+    });
+  }
+
+  function openModal(){
+    populateCategorySelects();
+    setFieldTab('income');
+    document.getElementById('incSource').value = '';
+    document.getElementById('incAmount').value = '';
+    document.getElementById('incDate').value = isoToday();
+    document.getElementById('expTitle').value = '';
+    document.getElementById('expAmount').value = '';
+    document.getElementById('expDate').value = isoToday();
+    document.getElementById('billTitle').value = '';
+    document.getElementById('billAmount').value = '';
+    document.getElementById('billDate').value = isoToday();
+    document.getElementById('goalName').value = '';
+    document.getElementById('goalTarget').value = '';
+    document.getElementById('goalDeadline').value = '';
+    setBodyScrollLock(true);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    modal.classList.add('is-open');
+  }
+  function closeModal(){ modal.classList.remove('is-open'); modal.classList.add('hidden'); modal.classList.remove('flex'); setBodyScrollLock(false); }
+
+  function setBodyScrollLock(locked){
+    document.body.style.overflow = locked ? 'hidden' : '';
+  }
+
+  // Esc to close + basic accessibility helpers
+  document.addEventListener('keydown', (e) => {
+    if(e.key !== 'Escape') return;
+    if(!modal.classList.contains('hidden')) closeModal();
+    if(!backupModal.classList.contains('hidden')){
+      backupModal.classList.remove('is-open');
+      backupModal.classList.add('hidden');
+      backupModal.classList.remove('flex');
+      setBodyScrollLock(false);
+    }
+  });
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if(activeFieldTab === 'income'){
+      const source = document.getElementById('incSource').value.trim();
+      const amount = parseFloat(document.getElementById('incAmount').value);
+      const date = document.getElementById('incDate').value;
+      if(!source || !amount || amount <= 0 || !date) return;
+      data.income.push({ id: uid(), source, amount, date });
+    } else if(activeFieldTab === 'expense'){
+      const title = document.getElementById('expTitle').value.trim();
+      const category = document.getElementById('expCategory').value;
+      const amount = parseFloat(document.getElementById('expAmount').value);
+      const date = document.getElementById('expDate').value;
+      if(!title || !amount || amount <= 0 || !date) return;
+      data.expenses.push({ id: uid(), title, category, amount, date });
+    } else if(activeFieldTab === 'bill'){
+      const title = document.getElementById('billTitle').value.trim();
+      const category = document.getElementById('billCategory').value;
+      const amount = parseFloat(document.getElementById('billAmount').value);
+      const dueDate = document.getElementById('billDate').value;
+      if(!title || !amount || amount <= 0 || !dueDate) return;
+      const status = dueDate <= isoToday() ? 'ready' : 'locked';
+      data.bills.push({ id: uid(), title, category, amount, dueDate, status });
+    } else if(activeFieldTab === 'goal'){
+      const name = document.getElementById('goalName').value.trim();
+      const target = parseFloat(document.getElementById('goalTarget').value);
+      const deadline = document.getElementById('goalDeadline').value || null;
+      if(!name || !target || target <= 0) return;
+      data.goals.push({ id: uid(), name, target, saved:0, deadline });
+    }
+    saveData(data);
+    renderAll();
+    closeModal();
+  });
+
+  // ---- re-check bill due dates periodically ----
+  setInterval(() => { if(runBillCheck(data)) renderAll(); }, 60000);
+
+  // ---- backup / restore ----
+  const backupModal = document.getElementById('backupModal');
+  const backupMsg = document.getElementById('backupMsg');
+
+  function showBackupMsg(text, isError){
+    backupMsg.textContent = text;
+    backupMsg.style.color = isError ? 'var(--danger)' : 'var(--sage)';
+    backupMsg.classList.remove('hidden');
+  }
+
+  document.getElementById('openBackupBtn').addEventListener('click', () => {
+    backupMsg.classList.add('hidden');
+    setBodyScrollLock(true);
+    backupModal.classList.remove('hidden');
+    backupModal.classList.add('flex');
+    backupModal.classList.add('is-open');
+  });
+  document.getElementById('closeBackupBtn').addEventListener('click', () => {
+    backupModal.classList.remove('is-open');
+    backupModal.classList.add('hidden');
+    backupModal.classList.remove('flex');
+    setBodyScrollLock(false);
+  });
+  backupModal.addEventListener('click', (e) => { if(e.target === backupModal){ backupModal.classList.remove('is-open'); backupModal.classList.add('hidden'); backupModal.classList.remove('flex'); setBodyScrollLock(false); } });
+
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nerovault-backup-' + isoToday() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showBackupMsg('Backup downloaded.', false);
+  });
+
+  document.getElementById('importInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const parsed = JSON.parse(reader.result);
+        if(typeof parsed !== 'object' || parsed === null) throw new Error('invalid');
+        if(!parsed.categories) parsed.categories = CATS;
+        if(!parsed.income) parsed.income = [];
+        if(!parsed.expenses) parsed.expenses = [];
+        if(!parsed.bills) parsed.bills = [];
+        if(!parsed.goals) parsed.goals = [];
+        if(typeof parsed.budget !== 'number') parsed.budget = 20000;
+        data = parsed;
+        saveData(data);
+        runBillCheck(data);
+        capacityInput.value = data.budget;
+        renderAll();
+        showBackupMsg('Backup restored successfully.', false);
+      }catch(err){
+        showBackupMsg('That file could not be read. Please choose a Nerovault backup file.', true);
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+})();
+</script>
+</body>
+</html>
