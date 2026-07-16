@@ -188,8 +188,7 @@
   .save-indicator{ animation:pulseGlow 1.5s ease infinite; }
 
   /* Net worth mini sparkline placeholder */
-  .spark{ height:24px; display:flex; align-items:flex-end; gap:2px; }
-  .spark span{ width:4px; border-radius:2px; background:var(--sage); transition:height 0.3s ease; }
+  .spark{ height:56px; display:flex; align-items:flex-end; gap:3px; }
 
   /* ---- dark mode ---- */
   html.dark{ --bg:#121518; --ink:#EDEEEF; --ink-soft:#A0A8B0; --card-bg:#1A1E23; --border:#2A2F35; --border-light:#23282D; }
@@ -445,6 +444,7 @@
           <div class="w-full mt-4 pt-3 border-t border-gray-100">
             <div class="flex items-center justify-between text-[11px] text-gray-500 mb-1.5">
               <span>Monthly spending trend</span>
+              <span class="text-[9px] text-gray-400">* in progress</span>
             </div>
             <div id="sparklineBar" class="spark"></div>
           </div>
@@ -537,7 +537,7 @@
 </div>
 
 <!-- ADD MODAL -->
-<div id="addModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop px-4">
+<div id="addModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop px-4" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
   <div class="card w-full max-w-md p-6 scale-in">
     <div class="flex items-center justify-between mb-4">
       <h3 id="addModalTitle" class="text-base font-semibold text-[var(--ink)]">Add something</h3>
@@ -672,7 +672,7 @@
 </div>
 
 <!-- HELP / USER MANUAL MODAL -->
-<div id="helpModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop px-4">
+<div id="helpModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop px-4" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
   <div class="card w-full max-w-lg p-6 scale-in" style="max-height:85vh; overflow-y:auto;">
     <div class="flex items-center justify-between mb-5">
       <div class="flex items-center gap-2.5">
@@ -680,7 +680,7 @@
           <path d="M20 4 L34 9.5 V19 C34 27.5 28 33.5 20 36 C12 33.5 6 27.5 6 19 V9.5 Z" stroke="#2F8F6F" stroke-width="1.6" fill="#E7F3EE"/>
           <path d="M14 20.5 L18 24.5 L26 15.5" stroke="#2F8F6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         </svg>
-        <h3 class="text-base font-bold text-[var(--ink)]">Nerovault Help</h3>
+        <h3 id="helpModalTitle" class="text-base font-bold text-[var(--ink)]">Nerovault Help</h3>
       </div>
       <button id="closeHelpBtn" class="text-gray-400 hover:text-gray-700 transition-colors">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -770,10 +770,10 @@
 </div>
 
 <!-- BACKUP MODAL -->
-<div id="backupModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop px-4">
+<div id="backupModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop px-4" role="dialog" aria-modal="true" aria-labelledby="backupModalTitle">
   <div class="card w-full max-w-md p-6 scale-in">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-semibold text-[var(--ink)]">Back up your data</h3>
+      <h3 id="backupModalTitle" class="text-base font-semibold text-[var(--ink)]">Back up your data</h3>
       <button id="closeBackupBtn" class="text-gray-400 hover:text-gray-700 transition-colors">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
@@ -821,7 +821,7 @@
 </div>
 
 <!-- ONBOARDING MODAL -->
-<div id="onboardModal" class="fixed inset-0 z-[65] hidden items-center justify-center modal-backdrop px-4">
+<div id="onboardModal" class="fixed inset-0 z-[65] hidden items-center justify-center modal-backdrop px-4" role="dialog" aria-modal="true">
   <div class="card w-full max-w-md p-6 scale-in">
 
     <div id="onboardStep1">
@@ -864,7 +864,7 @@
 </div>
 
 <!-- CONFIRM / DELETE MODAL -->
-<div id="confirmModal" class="fixed inset-0 z-[70] hidden items-center justify-center modal-backdrop px-4">
+<div id="confirmModal" class="fixed inset-0 z-[70] hidden items-center justify-center modal-backdrop px-4" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="card w-full max-w-sm p-6 scale-in">
     <div class="flex items-start gap-3 mb-4">
       <span class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style="background:var(--danger-soft);">
@@ -903,19 +903,22 @@
   const addDaysISO = (n) => { const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().split('T')[0]; };
 
   const CURRENCIES = {
-    PHP: { symbol:'₱', locale:'en-PH' },
-    USD: { symbol:'$', locale:'en-US' },
-    EUR: { symbol:'€', locale:'de-DE' },
-    GBP: { symbol:'£', locale:'en-GB' },
-    JPY: { symbol:'¥', locale:'ja-JP' },
-    INR: { symbol:'₹', locale:'en-IN' },
+    PHP: { symbol:'₱', locale:'en-PH', decimals:2 },
+    USD: { symbol:'$', locale:'en-US', decimals:2 },
+    EUR: { symbol:'€', locale:'de-DE', decimals:2 },
+    GBP: { symbol:'£', locale:'en-GB', decimals:2 },
+    JPY: { symbol:'¥', locale:'ja-JP', decimals:0 },
+    INR: { symbol:'₹', locale:'en-IN', decimals:2 },
   };
   let currencyCode = 'PHP';
   const peso = (n) => {
     const c = CURRENCIES[currencyCode] || CURRENCIES.PHP;
-    return c.symbol + Number(n || 0).toLocaleString(c.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return c.symbol + Number(n || 0).toLocaleString(c.locale, { minimumFractionDigits: c.decimals, maximumFractionDigits: c.decimals });
   };
-  const pesoNoSym = (n) => Number(n || 0).toLocaleString(CURRENCIES[currencyCode]?.locale || 'en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pesoNoSym = (n) => {
+    const c = CURRENCIES[currencyCode] || CURRENCIES.PHP;
+    return Number(n || 0).toLocaleString(c.locale, { minimumFractionDigits: c.decimals, maximumFractionDigits: c.decimals });
+  };
 
   function updateCurrencyLabels(){
     const c = CURRENCIES[currencyCode] || CURRENCIES.PHP;
@@ -990,7 +993,12 @@
     }
   }
   function saveData(d){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+    }catch(err){
+      showToast('Could not save — your browser storage may be full or unavailable. Download a backup to be safe.', 'danger');
+      return;
+    }
     // Show auto-save indicator
     const el = document.getElementById('saveIndicator');
     if(el){
@@ -1052,6 +1060,9 @@
   runRecurringCheck(data);
 
   // ---- month-over-month spending comparison ----
+  function daysInMonth(year, monthIndexZeroBased){
+    return new Date(year, monthIndexZeroBased + 1, 0).getDate();
+  }
   function monthSpendTotal(d, monthOffset){
     const now = new Date();
     const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
@@ -1059,6 +1070,19 @@
     const inMonth = (iso) => monthKey(iso) === key;
     const exp = d.expenses.filter(e => inMonth(e.date)).reduce((s,e) => s + Number(e.amount), 0);
     const paid = d.bills.filter(b => b.status === 'paid' && inMonth(b.dueDate)).reduce((s,b) => s + Number(b.amount), 0);
+    return exp + paid;
+  }
+  // Same as monthSpendTotal, but only counts days 1..throughDay of the target month —
+  // used to compare "this month so far" against the equivalent stretch of a prior month,
+  // instead of a partial month against a full one (which always looks artificially good).
+  function monthSpendThroughDay(d, monthOffset, throughDay){
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    const key = target.getFullYear() + '-' + String(target.getMonth() + 1).padStart(2, '0');
+    const cutoff = Math.min(throughDay, daysInMonth(target.getFullYear(), target.getMonth()));
+    const inRange = (iso) => monthKey(iso) === key && parseInt(iso.slice(8, 10), 10) <= cutoff;
+    const exp = d.expenses.filter(e => inRange(e.date)).reduce((s,e) => s + Number(e.amount), 0);
+    const paid = d.bills.filter(b => b.status === 'paid' && inRange(b.dueDate)).reduce((s,b) => s + Number(b.amount), 0);
     return exp + paid;
   }
   function monthSavingsTotal(d, monthOffset){
@@ -1070,17 +1094,28 @@
   function renderMonthCompare(d){
     const el = document.getElementById('monthCompare');
     if(!el) return;
-    const thisMonth = monthSpendTotal(d, 0);
-    const lastMonth = monthSpendTotal(d, -1);
-    if(lastMonth <= 0){
-      el.textContent = thisMonth > 0 ? 'First month with spending logged.' : '';
+    const dayOfMonth = new Date().getDate();
+    const thisMonthSoFar = monthSpendTotal(d, 0);
+    const lastMonthSameStretch = monthSpendThroughDay(d, -1, dayOfMonth);
+    const lastMonthFull = monthSpendTotal(d, -1);
+
+    if(lastMonthFull <= 0){
+      el.textContent = thisMonthSoFar > 0 ? `${peso(thisMonthSoFar)} spent so far this month — no data from last month to compare.` : '';
       el.style.color = '';
       return;
     }
-    const pct = Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
-    if(pct === 0){ el.textContent = 'Same spending as last month.'; el.style.color = ''; return; }
-    if(pct > 0){ el.textContent = `▲ ${pct}% more spent than last month.`; el.style.color = 'var(--danger)'; }
-    else { el.textContent = `▼ ${Math.abs(pct)}% less spent than last month.`; el.style.color = 'var(--sage)'; }
+    if(lastMonthSameStretch <= 0){
+      el.textContent = thisMonthSoFar > 0 ? `${peso(thisMonthSoFar)} spent so far this month.` : 'Nothing spent yet this month.';
+      el.style.color = '';
+      return;
+    }
+
+    const delta = thisMonthSoFar - lastMonthSameStretch;
+    const pct = Math.round((delta / lastMonthSameStretch) * 100);
+    const deltaAbs = peso(Math.abs(delta));
+    if(pct === 0){ el.textContent = `Same pace as this point last month (day ${dayOfMonth}).`; el.style.color = ''; return; }
+    if(pct > 0){ el.textContent = `▲ ${deltaAbs} more (${pct}%) than this point last month.`; el.style.color = 'var(--danger)'; }
+    else { el.textContent = `▼ ${deltaAbs} less (${Math.abs(pct)}%) than this point last month.`; el.style.color = 'var(--sage)'; }
   }
 
   // ---- sparkline: last 6 months spending ----
@@ -1102,15 +1137,15 @@
     const labels = [];
     for(let i = 5; i >= 0; i--){
       const target = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      labels.push(shortMonths[target.getMonth()]);
+      labels.push(shortMonths[target.getMonth()] + ' ' + target.getFullYear());
     }
     el.innerHTML = bars.map((v, i) => {
-      const h = Math.max(4, (v / max) * 22);
+      const h = Math.max(6, (v / max) * 36);
       const isCurrent = i === bars.length - 1;
-      return `<div class="flex flex-col items-center gap-0.5 flex-1">
-        <span class="text-[7px] text-gray-300 mono">${pesoNoSym(v)}</span>
-        <span style="height:${h}px; width:100%; max-width:20px; border-radius:3px; background:${isCurrent ? 'var(--sage)' : '#DCD9D1'}; transition:height 0.3s ease;"></span>
-        <span class="text-[8px] text-gray-400">${labels[i]}</span>
+      const tooltip = `${labels[i]}: ${peso(v)}${isCurrent ? ' (month in progress)' : ''}`;
+      return `<div class="flex flex-col items-center gap-1 flex-1" tabindex="0" role="img" aria-label="${escapeHtml(tooltip)}" title="${escapeHtml(tooltip)}">
+        <span style="height:${h}px; width:100%; max-width:22px; border-radius:3px; background:${isCurrent ? 'var(--sage)' : '#DCD9D1'}; ${isCurrent ? 'border:1.5px dashed var(--sage-dark);' : ''} transition:height 0.3s ease;"></span>
+        <span class="text-[9px] text-gray-400">${labels[i].slice(0,3)}${isCurrent ? '*' : ''}</span>
       </div>`;
     }).join('');
   }
@@ -1177,7 +1212,8 @@
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = start + (target - start) * eased;
       if(isCurrency){
-        el.textContent = prefix + Number(current).toLocaleString(CURRENCIES[currencyCode]?.locale || 'en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const dec = CURRENCIES[currencyCode]?.decimals ?? 2;
+        el.textContent = prefix + Number(current).toLocaleString(CURRENCIES[currencyCode]?.locale || 'en-PH', { minimumFractionDigits: dec, maximumFractionDigits: dec });
       } else {
         el.textContent = prefix + Math.round(current).toLocaleString() + (suffix || '');
       }
@@ -1325,10 +1361,10 @@
           </div>
           <div class="flex items-center gap-1.5 flex-shrink-0">
             <span class="text-[11px] text-gray-400 mr-0.5">${cat.percent}%</span>
-            <button data-action="editcat" data-id="${cat.id}" class="text-gray-300 hover:text-[var(--sage)] transition-colors p-0.5" title="Edit category">
+            <button data-action="editcat" data-id="${cat.id}" class="text-gray-300 hover:text-[var(--sage)] transition-colors p-0.5" title="Edit category" aria-label="Edit ${escapeHtml(cat.name)} category">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
             </button>
-            ${d.categories.length > 1 ? `<button data-action="delcat" data-id="${cat.id}" class="text-gray-300 hover:text-[var(--danger)] transition-colors p-0.5" title="Delete category">
+            ${d.categories.length > 1 ? `<button data-action="delcat" data-id="${cat.id}" class="text-gray-300 hover:text-[var(--danger)] transition-colors p-0.5" title="Delete category" aria-label="Delete ${escapeHtml(cat.name)} category">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>
             </button>` : ''}
           </div>
@@ -1427,10 +1463,10 @@
           <div class="flex items-center gap-1.5">
             ${b.status === 'locked' ? `<button data-action="force" data-id="${b.id}" class="text-[10px] font-medium px-2.5 py-1.5 rounded-md" style="background:var(--sage-soft); color:#1F6B50;">Make available</button>` : ''}
             ${b.status === 'ready' ? `<button data-action="pay" data-id="${b.id}" class="text-[10px] font-medium px-2.5 py-1.5 rounded-md" style="background:#F2F0EA; color:#6B6659;">Mark as paid</button>` : ''}
-            <button data-action="editbill" data-id="${b.id}" class="text-gray-400 hover:text-[var(--sage)] transition-colors px-1" title="Edit">
+            <button data-action="editbill" data-id="${b.id}" class="text-gray-400 hover:text-[var(--sage)] transition-colors px-1" title="Edit" aria-label="Edit ${escapeHtml(b.title)}">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
             </button>
-            <button data-action="delbill" data-id="${b.id}" class="text-gray-400 hover:text-[var(--danger)] transition-colors px-1" title="Remove">
+            <button data-action="delbill" data-id="${b.id}" class="text-gray-400 hover:text-[var(--danger)] transition-colors px-1" title="Remove" aria-label="Remove ${escapeHtml(b.title)}">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
             </button>
           </div>
@@ -1461,10 +1497,10 @@
             ${g.deadline ? `<p class="text-[11px] text-gray-400 mt-0.5">Target: ${fmtDate(g.deadline)}</p>` : ''}
           </div>
           <div class="flex items-center gap-1 flex-shrink-0">
-            <button data-action="editgoal" data-id="${g.id}" class="text-gray-400 hover:text-[var(--sage)] transition-colors px-1" title="Edit">
+            <button data-action="editgoal" data-id="${g.id}" class="text-gray-400 hover:text-[var(--sage)] transition-colors px-1" title="Edit" aria-label="Edit ${escapeHtml(g.name)} goal">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
             </button>
-            <button data-action="delgoal" data-id="${g.id}" class="text-gray-400 hover:text-[var(--danger)] transition-colors px-1" title="Remove">
+            <button data-action="delgoal" data-id="${g.id}" class="text-gray-400 hover:text-[var(--danger)] transition-colors px-1" title="Remove" aria-label="Remove ${escapeHtml(g.name)} goal">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
             </button>
           </div>
@@ -1585,10 +1621,10 @@
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-xs font-bold mono whitespace-nowrap" style="color:var(--sage);">${peso(e.amount)}</span>
-                <button data-action="editsaving" data-id="${e.id}" class="text-gray-300 hover:text-[var(--sage)] transition-colors" title="Edit">
+                <button data-action="editsaving" data-id="${e.id}" class="text-gray-300 hover:text-[var(--sage)] transition-colors" title="Edit" aria-label="Edit ${escapeHtml(e.label || 'Savings')} entry">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                 </button>
-                <button data-action="delsaving" data-id="${e.id}" class="text-gray-300 hover:text-[var(--danger)] transition-colors" title="Remove">
+                <button data-action="delsaving" data-id="${e.id}" class="text-gray-300 hover:text-[var(--danger)] transition-colors" title="Remove" aria-label="Remove ${escapeHtml(e.label || 'Savings')} entry">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
               </div>
@@ -1669,10 +1705,10 @@
         </div>
         <div class="flex items-center gap-2">
           <span class="text-xs font-bold mono whitespace-nowrap" style="color:${isIncome ? 'var(--sage)' : 'var(--ink)'}">${isIncome ? '+' : '−'}${peso(it.amount)}</span>
-          ${it.type !== 'bill' ? `<button data-action="edit${it.type}" data-id="${it.id}" class="text-gray-300 hover:text-[var(--sage)] transition-colors" title="Edit">
+          ${it.type !== 'bill' ? `<button data-action="edit${it.type}" data-id="${it.id}" class="text-gray-300 hover:text-[var(--sage)] transition-colors" title="Edit" aria-label="Edit ${escapeHtml(it.title)}">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
           </button>
-          <button data-action="del${it.type}" data-id="${it.id}" class="text-gray-300 hover:text-[var(--danger)] transition-colors" title="Remove">
+          <button data-action="del${it.type}" data-id="${it.id}" class="text-gray-300 hover:text-[var(--danger)] transition-colors" title="Remove" aria-label="Remove ${escapeHtml(it.title)}">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>` : ''}
         </div>
@@ -1950,8 +1986,10 @@
       const percentInput = document.getElementById('editCatPercent-' + id);
       const name = nameInput.value.trim();
       const color = colorInput.value || cat.color;
-      const percent = parseFloat(percentInput.value);
-      if(!name || !percent || percent <= 0) return;
+      let percent = parseFloat(percentInput.value);
+      if(!name){ showToast('Enter a category name.', 'danger'); return; }
+      if(!percent || percent <= 0){ showToast('Enter a percentage greater than 0.', 'danger'); return; }
+      percent = Math.min(100, percent);
       cat.name = name; cat.color = color; cat.percent = percent;
       normalizeCategories(data);
       editingCategoryId = null;
@@ -2124,6 +2162,7 @@
 
   let editingId = null;
   function openModal(opts){
+    rememberFocus();
     editingId = (opts && opts.id) || null;
     populateCategorySelects();
     setFieldTab(opts && opts.type ? opts.type : 'income');
@@ -2174,10 +2213,18 @@
     modal.classList.add('flex');
     modal.classList.add('is-open');
   }
-  function closeModal(){ modal.classList.remove('is-open'); modal.classList.add('hidden'); modal.classList.remove('flex'); setBodyScrollLock(false); }
+  function closeModal(){ modal.classList.remove('is-open'); modal.classList.add('hidden'); modal.classList.remove('flex'); setBodyScrollLock(false); restoreFocus(); }
 
   function setBodyScrollLock(locked){
     document.body.style.overflow = locked ? 'hidden' : '';
+  }
+
+  // ---- focus return for modals (keyboard/screen-reader users don't get stranded) ----
+  let lastFocusedEl = null;
+  function rememberFocus(){ lastFocusedEl = document.activeElement; }
+  function restoreFocus(){
+    if(lastFocusedEl && typeof lastFocusedEl.focus === 'function') lastFocusedEl.focus();
+    lastFocusedEl = null;
   }
 
   // Esc key + keyboard shortcuts
@@ -2189,6 +2236,7 @@
         backupModal.classList.add('hidden');
         backupModal.classList.remove('flex');
         setBodyScrollLock(false);
+        restoreFocus();
       }
       if(!confirmModal.classList.contains('hidden')) closeConfirmModal();
       if(!helpModal.classList.contains('hidden')) closeHelpModal();
@@ -2206,6 +2254,10 @@
   // FAB
   document.getElementById('fabAdd').addEventListener('click', openModal);
 
+  function formError(msg){
+    showToast(msg, 'danger');
+  }
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     let toastMsg = null;
@@ -2213,7 +2265,9 @@
       const source = document.getElementById('incSource').value.trim();
       const amount = parseFloat(document.getElementById('incAmount').value);
       const date = document.getElementById('incDate').value;
-      if(!source || !amount || amount <= 0 || !date) return;
+      if(!source){ formError('Enter where this income is from.'); return; }
+      if(!amount || amount <= 0){ formError('Enter an amount greater than 0.'); return; }
+      if(!date){ formError('Pick a date.'); return; }
       if(editingId){
         const item = data.income.find(x => x.id === editingId);
         if(item){ item.source = source; item.amount = amount; item.date = date; item.recurring = document.getElementById('incRecurring').checked; }
@@ -2228,7 +2282,9 @@
       const amount = parseFloat(document.getElementById('expAmount').value);
       const date = document.getElementById('expDate').value;
       const notes = document.getElementById('expNotes').value.trim();
-      if(!title || !amount || amount <= 0 || !date) return;
+      if(!title){ formError('Enter what this expense was for.'); return; }
+      if(!amount || amount <= 0){ formError('Enter an amount greater than 0.'); return; }
+      if(!date){ formError('Pick a date.'); return; }
       if(editingId){
         const item = data.expenses.find(x => x.id === editingId);
         if(item){ item.title = title; item.category = category; item.amount = amount; item.date = date; item.notes = notes; }
@@ -2242,7 +2298,9 @@
       const category = document.getElementById('billCategory').value;
       const amount = parseFloat(document.getElementById('billAmount').value);
       const dueDate = document.getElementById('billDate').value;
-      if(!title || !amount || amount <= 0 || !dueDate) return;
+      if(!title){ formError('Enter what this bill is.'); return; }
+      if(!amount || amount <= 0){ formError('Enter an amount greater than 0.'); return; }
+      if(!dueDate){ formError('Pick a due date.'); return; }
       const status = dueDate <= isoToday() ? 'ready' : 'locked';
       if(editingId){
         const item = data.bills.find(x => x.id === editingId);
@@ -2256,7 +2314,9 @@
       const label = document.getElementById('svLabel').value.trim();
       const amount = parseFloat(document.getElementById('svAmount').value);
       const date = document.getElementById('svDate').value;
-      if(!label || !amount || amount <= 0 || !date) return;
+      if(!label){ formError('Enter a label for this savings entry.'); return; }
+      if(!amount || amount <= 0){ formError('Enter an amount greater than 0.'); return; }
+      if(!date){ formError('Pick a date.'); return; }
       if(editingId){
         const item = data.savings.find(x => x.id === editingId);
         if(item){ item.label = label; item.amount = amount; item.date = date; }
@@ -2269,7 +2329,8 @@
       const name = document.getElementById('goalName').value.trim();
       const target = parseFloat(document.getElementById('goalTarget').value);
       const deadline = document.getElementById('goalDeadline').value || null;
-      if(!name || !target || target <= 0) return;
+      if(!name){ formError('Enter what you\'re saving for.'); return; }
+      if(!target || target <= 0){ formError('Enter a target amount greater than 0.'); return; }
       if(editingId){
         const item = data.goals.find(x => x.id === editingId);
         if(item){ item.name = name; item.target = target; item.deadline = deadline; }
@@ -2286,9 +2347,11 @@
     if(toastMsg) showToast(toastMsg, 'success');
   });
 
+
   // ---- help / user manual modal ----
   const helpModal = document.getElementById('helpModal');
   function openHelpModal(){
+    rememberFocus();
     setBodyScrollLock(true);
     helpModal.classList.remove('hidden');
     helpModal.classList.add('flex');
@@ -2299,6 +2362,7 @@
     helpModal.classList.add('hidden');
     helpModal.classList.remove('flex');
     setBodyScrollLock(false);
+    restoreFocus();
   }
   document.getElementById('helpBtn').addEventListener('click', openHelpModal);
   document.getElementById('closeHelpBtn').addEventListener('click', closeHelpModal);
@@ -2373,6 +2437,7 @@
   }
 
   function openConfirmModal({ title, message, requireText = null, confirmLabel = 'Delete', onConfirm }){
+    rememberFocus();
     confirmTitleEl.textContent = title;
     confirmMessageEl.textContent = message;
     confirmActionBtn.textContent = confirmLabel;
@@ -2403,6 +2468,7 @@
     setBodyScrollLock(false);
     confirmCallback = null;
     confirmRequiredText = null;
+    restoreFocus();
   }
 
   confirmTypeInput.addEventListener('input', () => {
@@ -2432,6 +2498,7 @@
   }
 
   document.getElementById('openBackupBtn').addEventListener('click', () => {
+    rememberFocus();
     backupMsg.classList.add('hidden');
     setBodyScrollLock(true);
     backupModal.classList.remove('hidden');
@@ -2443,8 +2510,9 @@
     backupModal.classList.add('hidden');
     backupModal.classList.remove('flex');
     setBodyScrollLock(false);
+    restoreFocus();
   });
-  backupModal.addEventListener('click', (e) => { if(e.target === backupModal){ backupModal.classList.remove('is-open'); backupModal.classList.add('hidden'); backupModal.classList.remove('flex'); setBodyScrollLock(false); } });
+  backupModal.addEventListener('click', (e) => { if(e.target === backupModal){ backupModal.classList.remove('is-open'); backupModal.classList.add('hidden'); backupModal.classList.remove('flex'); setBodyScrollLock(false); restoreFocus(); } });
 
   document.getElementById('exportBtn').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
