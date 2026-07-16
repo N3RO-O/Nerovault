@@ -1193,7 +1193,6 @@
   let chart;
   function renderChart(d){
     const t = totals(d);
-    const denom = t.totalIncome > 0 ? t.totalIncome : d.budget;
     const free = Math.max(0, t.available);
     document.getElementById('legendSpent').textContent = peso(t.spent);
     document.getElementById('legendCommitted').textContent = peso(t.committed);
@@ -1282,7 +1281,7 @@
     const wrap = document.getElementById('categoryList');
     wrap.innerHTML = '';
 
-    const opts = '<option value="">Uncategorized</option>' + d.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+    const opts = categoryOptionsHtml(d);
     document.getElementById('expCategory').innerHTML = opts;
     document.getElementById('billCategory').innerHTML = opts;
 
@@ -1357,6 +1356,9 @@
     ready:  { label:'Ready to pay', bg:'var(--sage-soft)', fg:'#1F6B50', dot:'var(--sage)' },
     paid:   { label:'Paid', bg:'#F2F0EA', fg:'#6B6659', dot:'#94A3B8' },
   };
+  function categoryOptionsHtml(d){
+    return '<option value="">Uncategorized</option>' + d.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  }
   function catName(d, id){ if(!id) return 'Uncategorized'; const c = d.categories.find(c => c.id === id); return c ? c.name : 'Uncategorized'; }
   function catColor(d, id){ if(!id) return '#94A3B8'; const c = d.categories.find(c => c.id === id); return c ? c.color : '#94A3B8'; }
   function escapeHtml(str){ const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
@@ -1715,21 +1717,27 @@
     btn.addEventListener('click', () => {
       const preset = btn.dataset.preset;
       const cats = data.categories;
-      if(!cats || cats.length < 4) return;
-      switch(preset){
-        case '50-30-20':
-          cats[0].percent = 50; cats[1].percent = 30; cats[2].percent = 20; cats[3].percent = 0;
-          break;
-        case '70-20-10':
-          cats[0].percent = 70; cats[1].percent = 20; cats[2].percent = 10; cats[3].percent = 0;
-          break;
-        case '60-30-10':
-          cats[0].percent = 60; cats[1].percent = 30; cats[2].percent = 10; cats[3].percent = 0;
-          break;
-        case '80-10-10':
-          cats[0].percent = 80; cats[1].percent = 10; cats[2].percent = 10; cats[3].percent = 0;
-          break;
+      if(!cats || cats.length === 0) return;
+
+      // Presets are defined against the four default categories by id, so they still
+      // land on the right category even if the user has reordered, renamed, or added
+      // custom categories. Any category without a defined value in the preset gets 0%.
+      const presetMap = {
+        '50-30-20': { family:50, essential:30, lifestyle:20, savings:0 },
+        '70-20-10': { family:70, essential:20, lifestyle:10, savings:0 },
+        '60-30-10': { family:60, essential:30, lifestyle:10, savings:0 },
+        '80-10-10': { family:80, essential:10, lifestyle:10, savings:0 },
+      };
+      const values = presetMap[preset];
+      if(!values) return;
+
+      const hasDefaultCats = cats.some(c => Object.prototype.hasOwnProperty.call(values, c.id));
+      if(!hasDefaultCats){
+        showToast('This preset needs the default categories — none were found.', 'danger');
+        return;
       }
+      cats.forEach(c => { c.percent = Object.prototype.hasOwnProperty.call(values, c.id) ? values[c.id] : 0; });
+
       normalizeCategories(data);
       saveData(data);
       renderAll();
@@ -1763,6 +1771,9 @@
   // ---- rollover toggle ----
   const rolloverToggle = document.getElementById('rolloverToggle');
   rolloverToggle.checked = localStorage.getItem(ROLLOVER_KEY) === 'true';
+  rolloverToggle.addEventListener('change', () => {
+    localStorage.setItem(ROLLOVER_KEY, rolloverToggle.checked ? 'true' : 'false');
+  });
 
   // ---- tab switching (right panel) ----
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -2047,15 +2058,6 @@
   document.getElementById('tab-savings-list').addEventListener('click', handleDelegatedClick);
   document.getElementById('tab-feed-list').addEventListener('click', handleDelegatedClick);
   document.getElementById('categoryList').addEventListener('click', handleDelegatedClick);
-  // Also listen on parent containers for delegate
-  document.getElementById('tab-bills').addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-action]');
-    if(btn && ['force','pay','editbill','delbill'].includes(btn.dataset.action)) handleDelegatedClick(e);
-  });
-  document.getElementById('tab-goals').addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-action]');
-    if(btn && ['addfunds','quickfunds','editgoal','delgoal'].includes(btn.dataset.action)) handleDelegatedClick(e);
-  });
 
   // ---- add modal ----
   const modal = document.getElementById('addModal');
@@ -2065,7 +2067,7 @@
   let activeFieldTab = 'income';
 
   function populateCategorySelects(){
-    const opts = data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    const opts = categoryOptionsHtml(data);
     const exp = document.getElementById('expCategory');
     const bill = document.getElementById('billCategory');
     if(exp) exp.innerHTML = opts;
@@ -2503,7 +2505,7 @@
       try{
         const parsed = JSON.parse(reader.result);
         if(typeof parsed !== 'object' || parsed === null) throw new Error('invalid');
-        if(!parsed.categories) parsed.categories = CATS;
+        if(!parsed.categories) parsed.categories = JSON.parse(JSON.stringify(CATS));
         if(!parsed.income) parsed.income = [];
         if(!parsed.expenses) parsed.expenses = [];
         if(!parsed.bills) parsed.bills = [];
