@@ -574,8 +574,17 @@
         </div>
         <label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
           <input id="incRecurring" type="checkbox" class="rounded border-gray-300 text-[var(--sage)] focus:ring-0">
-          Repeats monthly
+          Repeats
         </label>
+        <div id="incFreqWrap" class="hidden">
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">How often?</label>
+          <select id="incFreq" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+            <option value="monthly">Monthly</option>
+            <option value="semimonthly">Twice a month (15th &amp; end of month)</option>
+            <option value="biweekly">Every 2 weeks</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </div>
       </div>
 
       <!-- EXPENSE FIELDS -->
@@ -1190,10 +1199,30 @@
     return Math.max(1, end - now.getDate() + 1);
   }
 
-  function categorySpent(d, catId){
-    const exp = d.expenses.filter(e => e.category === catId).reduce((s,e) => s + Number(e.amount), 0);
-    const paid = d.bills.filter(b => b.category === catId && b.status === 'paid').reduce((s,b) => s + Number(b.amount), 0);
+  // Category spend/allocation is a MONTHLY concept (it's checked against a "Budget"
+  // capacity per category), unlike Net Worth/Available which are lifetime running totals.
+  // So this only counts activity within the given month, not all-time.
+  function categorySpentInMonth(d, catId, monthOffset){
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    const key = target.getFullYear() + '-' + String(target.getMonth() + 1).padStart(2, '0');
+    const inMonth = (iso) => monthKey(iso) === key;
+    const exp = d.expenses.filter(e => e.category === catId && inMonth(e.date)).reduce((s,e) => s + Number(e.amount), 0);
+    const paid = d.bills.filter(b => b.category === catId && b.status === 'paid' && inMonth(b.dueDate)).reduce((s,b) => s + Number(b.amount), 0);
     return exp + paid;
+  }
+  function categorySpent(d, catId){ return categorySpentInMonth(d, catId, 0); }
+
+  // Rollover: when enabled, whatever a category didn't spend last month is added to
+  // this month's allocation for that category. Uses the category's *current*
+  // percent/budget to estimate what last month's allocation would have been, since we
+  // don't keep a historical snapshot of budget/percent per month.
+  function isRolloverEnabled(){ return localStorage.getItem(ROLLOVER_KEY) === 'true'; }
+  function categoryRolloverAmount(d, cat){
+    if(!isRolloverEnabled()) return 0;
+    const lastAllocated = (d.budget * cat.percent) / 100;
+    const lastSpent = categorySpentInMonth(d, cat.id, -1);
+    return Math.max(0, lastAllocated - lastSpent);
   }
 
   // ---- animated number counting ----
@@ -1346,7 +1375,9 @@
         return;
       }
 
-      const allocated = (d.budget * cat.percent) / 100;
+      const baseAllocated = (d.budget * cat.percent) / 100;
+      const rollover = categoryRolloverAmount(d, cat);
+      const allocated = baseAllocated + rollover;
       const spent = categorySpent(d, cat.id);
       const pct = allocated > 0 ? (spent / allocated) * 100 : 0;
       const over = pct >= 100;
@@ -1376,6 +1407,7 @@
         <div class="progress-bar mb-1.5">
           <div class="progress-bar-fill" style="width:${Math.min(100,pct)}%; background:${barColor};"></div>
         </div>
+        ${rollover > 0 ? `<p class="text-[11px] mb-0.5" style="color:var(--sage)">+${peso(rollover)} carried over from last month</p>` : ''}
         ${over ? `<p class="text-[11px] font-medium" style="color:var(--danger)">Over budget for this category</p>` : warn ? `<p class="text-[11px]" style="color:var(--amber)">Almost at your limit</p>` : `<p class="text-[11px] text-gray-400">${pct.toFixed(0)}% used</p>`}
       `;
       wrap.appendChild(card);
@@ -1809,6 +1841,7 @@
   rolloverToggle.checked = localStorage.getItem(ROLLOVER_KEY) === 'true';
   rolloverToggle.addEventListener('change', () => {
     localStorage.setItem(ROLLOVER_KEY, rolloverToggle.checked ? 'true' : 'false');
+    renderCategories(data);
   });
 
   // ---- tab switching (right panel) ----
@@ -2121,6 +2154,10 @@
   }
   document.querySelectorAll('.field-tab').forEach(btn => btn.addEventListener('click', () => setFieldTab(btn.dataset.ftab)));
 
+  document.getElementById('incRecurring').addEventListener('change', (e) => {
+    document.getElementById('incFreqWrap').classList.toggle('hidden', !e.target.checked);
+  });
+
   // ---- custom category UI ----
   const addCatBtn = document.getElementById('addCatBtn');
   const newCatName = document.getElementById('newCatName');
@@ -2170,6 +2207,8 @@
     document.getElementById('incAmount').value = '';
     document.getElementById('incDate').value = isoToday();
     document.getElementById('incRecurring').checked = false;
+    document.getElementById('incFreq').value = 'monthly';
+    document.getElementById('incFreqWrap').classList.add('hidden');
     document.getElementById('expTitle').value = '';
     document.getElementById('expNotes').value = '';
     document.getElementById('expAmount').value = '';
@@ -2190,7 +2229,14 @@
       document.getElementById('addModalTitle').textContent = type === 'income' ? 'Edit income' : type === 'expense' ? 'Edit expense' : type === 'bill' ? 'Edit bill' : type === 'saving' ? 'Edit savings entry' : 'Edit goal';
       if(type === 'income'){
         const item = data.income.find(x => x.id === editingId);
-        if(item){ document.getElementById('incSource').value = item.source; document.getElementById('incAmount').value = item.amount; document.getElementById('incDate').value = item.date; document.getElementById('incRecurring').checked = !!item.recurring; }
+        if(item){
+          document.getElementById('incSource').value = item.source;
+          document.getElementById('incAmount').value = item.amount;
+          document.getElementById('incDate').value = item.date;
+          document.getElementById('incRecurring').checked = !!item.recurring;
+          document.getElementById('incFreq').value = item.recurringFreq || 'monthly';
+          document.getElementById('incFreqWrap').classList.toggle('hidden', !item.recurring);
+        }
       } else if(type === 'expense'){
         const item = data.expenses.find(x => x.id === editingId);
         if(item){ document.getElementById('expTitle').value = item.title; document.getElementById('expNotes').value = item.notes || ''; document.getElementById('expAmount').value = item.amount; document.getElementById('expDate').value = item.date; document.getElementById('expCategory').value = item.category || ''; }
