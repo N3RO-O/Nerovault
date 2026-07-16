@@ -461,6 +461,7 @@
           <div class="flex items-center gap-1 bg-[#F2F0EA] rounded-xl p-1 mb-3">
             <button class="tab-btn flex-1 text-xs font-semibold py-2 rounded-lg" data-tab="bills" data-active="true">Bills</button>
             <button class="tab-btn flex-1 text-xs font-semibold py-2 rounded-lg" data-tab="goals" data-active="false">Goals</button>
+            <button class="tab-btn flex-1 text-xs font-semibold py-2 rounded-lg" data-tab="savings" data-active="false">Savings</button>
             <button class="tab-btn flex-1 text-xs font-semibold py-2 rounded-lg" data-tab="feed" data-active="false">History</button>
           </div>
 
@@ -487,6 +488,11 @@
           <!-- Goals Tab -->
           <div id="tab-goals" class="hidden">
             <div class="panel-scroll space-y-3 pr-1" id="tab-goals-list"></div>
+          </div>
+
+          <!-- Savings Tab -->
+          <div id="tab-savings" class="hidden">
+            <div class="panel-scroll space-y-3 pr-1" id="tab-savings-list"></div>
           </div>
 
           <!-- History Tab -->
@@ -540,11 +546,12 @@
       </button>
     </div>
 
-    <div id="addFieldTabs" class="grid grid-cols-4 gap-1.5 mb-5">
+    <div id="addFieldTabs" class="grid grid-cols-5 gap-1.5 mb-5">
       <button class="field-tab text-xs font-semibold py-2 rounded-lg" data-ftab="income" data-active="true">Income</button>
       <button class="field-tab text-xs font-semibold py-2 rounded-lg" data-ftab="expense" data-active="false">Expense</button>
       <button class="field-tab text-xs font-semibold py-2 rounded-lg" data-ftab="bill" data-active="false">Bill</button>
       <button class="field-tab text-xs font-semibold py-2 rounded-lg" data-ftab="goal" data-active="false">Goal</button>
+      <button class="field-tab text-xs font-semibold py-2 rounded-lg" data-ftab="saving" data-active="false">Save</button>
     </div>
 
     <form id="addForm" class="space-y-4">
@@ -637,6 +644,24 @@
           <div>
             <label class="block text-xs font-medium text-gray-500 mb-1.5">Target date (optional)</label>
             <input id="goalDeadline" type="date" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+          </div>
+        </div>
+      </div>
+
+      <!-- SAVING FIELDS -->
+      <div id="fields-saving" class="hidden space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">Savings category / label</label>
+          <input id="svLabel" type="text" placeholder="e.g. Emergency fund, Vacation 2026" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label id="svAmountLabel" class="block text-xs font-medium text-gray-500 mb-1.5">Amount (₱)</label>
+            <input id="svAmount" type="number" min="1" step="1" placeholder="0.00" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Date</label>
+            <input id="svDate" type="date" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
           </div>
         </div>
       </div>
@@ -910,6 +935,7 @@
       expenses: [],
       bills: [],
       goals: [],
+      savings: [],
     };
   }
 
@@ -939,6 +965,7 @@
       if(!p.expenses) p.expenses = [];
       if(!p.bills) p.bills = p.ledger || [];
       if(!p.goals) p.goals = [];
+      if(!p.savings) p.savings = [];
       if(typeof p.budget !== 'number') p.budget = 20000;
       if(!p.currency || !CURRENCIES[p.currency]) p.currency = 'PHP';
       normalizeCategories(p);
@@ -1100,10 +1127,11 @@
     const paidBills = d.bills.filter(b => b.status === 'paid').reduce((s,i) => s + Number(i.amount), 0);
     const upcomingBills = d.bills.filter(b => b.status !== 'paid').reduce((s,i) => s + Number(i.amount), 0);
     const totalSaved = d.goals.reduce((s,g) => s + Number(g.saved), 0);
-    const available = totalIncome - totalExpenses - paidBills - totalSaved - upcomingBills;
+    const totalSavings = d.savings.reduce((s,v) => s + Number(v.amount), 0);
+    const available = totalIncome - totalExpenses - paidBills - totalSaved - totalSavings - upcomingBills;
     const spent = totalExpenses + paidBills;
-    const committed = upcomingBills + totalSaved;
-    return { totalIncome, totalExpenses, paidBills, upcomingBills, totalSaved, available, spent, committed };
+    const committed = upcomingBills + totalSaved + totalSavings;
+    return { totalIncome, totalExpenses, paidBills, upcomingBills, totalSaved, totalSavings, available, spent, committed };
   }
 
   function daysLeftInMonth(){
@@ -1444,6 +1472,95 @@
     });
   }
 
+  // ---- savings tab ----
+  function renderSavings(d){
+    const wrap = document.getElementById('tab-savings-list');
+    wrap.innerHTML = '';
+
+    // Group savings by month
+    const monthly = {};
+    d.savings.forEach(s => {
+      const mk = monthKey(s.date);
+      if(!monthly[mk]) monthly[mk] = [];
+      monthly[mk].push(s);
+    });
+
+    const sortedMonths = Object.keys(monthly).sort();
+    let cumulative = 0;
+    const currentMonth = monthKey(isoToday());
+    let thisMonthContrib = 0;
+    let totalRunning = 0;
+
+    // Calculate totals
+    d.savings.forEach(s => {
+      const amt = Number(s.amount) || 0;
+      totalRunning += amt;
+      if(monthKey(s.date) === currentMonth) thisMonthContrib += amt;
+    });
+
+    // Overview cards
+    const overview = document.createElement('div');
+    overview.className = 'grid grid-cols-2 gap-2.5 mb-4';
+    overview.innerHTML = `
+      <div class="rounded-xl border border-gray-100 p-3.5 text-center" style="background:var(--sage-soft);">
+        <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">This Month</p>
+        <p class="text-lg font-bold mono mt-1" style="color:var(--sage);">${peso(thisMonthContrib)}</p>
+        <p class="text-[10px] text-gray-500 mt-0.5">savings contribution</p>
+      </div>
+      <div class="rounded-xl border border-gray-100 p-3.5 text-center" style="background:var(--lavender-soft);">
+        <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Running Balance</p>
+        <p class="text-lg font-bold mono mt-1" style="color:var(--lavender);">${peso(totalRunning)}</p>
+        <p class="text-[10px] text-gray-500 mt-0.5">cumulative total</p>
+      </div>
+    `;
+    wrap.appendChild(overview);
+
+    if(d.savings.length === 0){
+      wrap.innerHTML += `<p class="text-center text-sm text-gray-400 py-6">No savings entries yet.<br><span class="text-xs">Tap Add → Save to record one.</span></p>`;
+      return;
+    }
+
+    sortedMonths.forEach(mk => {
+      const entries = monthly[mk];
+      const monthTotal = entries.reduce((s, e) => s + Number(e.amount), 0);
+      cumulative += monthTotal;
+
+      const [year, month] = mk.split('-');
+      const monthName = new Date(parseInt(year), parseInt(month)-1).toLocaleDateString('en-PH', { month:'long', year:'numeric' });
+
+      const group = document.createElement('div');
+      group.className = 'mb-3';
+      group.innerHTML = `
+        <div class="flex items-center justify-between mb-2 px-1">
+          <p class="text-[11px] font-semibold text-gray-500">${escapeHtml(monthName)}</p>
+          <p class="text-[11px] font-semibold text-gray-600 mono">${peso(cumulative)}</p>
+        </div>
+        <div class="space-y-2">
+          ${entries.map(e => `
+            <div class="flex items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2.5 fade-in">
+              <div class="min-w-0 flex items-center gap-2.5">
+                <span class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style="background:var(--sage-soft);">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                </span>
+                <div>
+                  <p class="text-xs font-semibold text-[var(--ink)] truncate">${escapeHtml(e.label || 'Savings')}</p>
+                  <p class="text-[10px] text-gray-400">${fmtDate(e.date)}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold mono whitespace-nowrap" style="color:var(--sage);">${peso(e.amount)}</span>
+                <button data-action="delsaving" data-id="${e.id}" class="text-gray-300 hover:text-[var(--danger)] transition-colors" title="Remove">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      wrap.appendChild(group);
+    });
+  }
+
   // ---- history tab ----
   function renderFeed(d){
     const wrap = document.getElementById('tab-feed-list');
@@ -1531,6 +1648,7 @@
     renderCategories(data);
     renderBills(data);
     renderGoals(data);
+    renderSavings(data);
     renderFeed(data);
     renderChart(data);
     renderMonthCompare(data);
@@ -1590,6 +1708,7 @@
     if(d.expenses.length) parts.push(d.expenses.length + ' expense' + (d.expenses.length > 1 ? 's' : ''));
     if(d.bills.length) parts.push(d.bills.length + ' bill' + (d.bills.length > 1 ? 's' : ''));
     if(d.goals.length) parts.push(d.goals.length + ' goal' + (d.goals.length > 1 ? 's' : ''));
+    if(d.savings.length) parts.push(d.savings.length + ' saving' + (d.savings.length > 1 ? 's' : ''));
     el.textContent = parts.length ? parts.join(' · ') + ' logged' : '';
   }
 
@@ -1613,7 +1732,7 @@
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.dataset.active = 'false');
       btn.dataset.active = 'true';
-      ['bills','goals','feed'].forEach(t => {
+      ['bills','goals','savings','feed'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('hidden', t !== btn.dataset.tab);
       });
     });
@@ -1807,6 +1926,19 @@
       });
       return;
     }
+    if(action === 'delsaving'){
+      const idx = data.savings.findIndex(x=>x.id===id);
+      if(idx === -1) return;
+      const removed = data.savings[idx];
+      data.savings.splice(idx, 1);
+      saveData(data); renderAll();
+      showToast('Savings entry removed.', 'danger', () => {
+        data.savings.splice(idx, 0, removed);
+        saveData(data); renderAll();
+        showToast('Savings entry restored.', 'success');
+      });
+      return;
+    }
     if(action === 'delgoal'){
       const idx = data.goals.findIndex(x=>x.id===id);
       if(idx === -1) return;
@@ -1905,7 +2037,7 @@
   function setFieldTab(tab){
     activeFieldTab = tab;
     document.querySelectorAll('.field-tab').forEach(b => b.dataset.active = (b.dataset.ftab === tab) ? 'true' : 'false');
-    ['income','expense','bill','goal'].forEach(t => {
+    ['income','expense','bill','goal','saving'].forEach(t => {
       document.getElementById('fields-' + t).classList.toggle('hidden', t !== tab);
     });
   }
@@ -2074,6 +2206,13 @@
         data.bills.push({ id: uid(), title, category, amount, dueDate, status, recurring: document.getElementById('billRecurring').checked });
         toastMsg = `Bill "${title}" scheduled.`;
       }
+    } else if(activeFieldTab === 'saving'){
+      const label = document.getElementById('svLabel').value.trim();
+      const amount = parseFloat(document.getElementById('svAmount').value);
+      const date = document.getElementById('svDate').value;
+      if(!label || !amount || amount <= 0 || !date) return;
+      data.savings.push({ id: uid(), label, amount, date });
+      toastMsg = `Saved ${peso(amount)} to "${label}".`;
     } else if(activeFieldTab === 'goal'){
       const name = document.getElementById('goalName').value.trim();
       const target = parseFloat(document.getElementById('goalTarget').value);
