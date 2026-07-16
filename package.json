@@ -1,0 +1,19 @@
+{
+  "name": "nerovault",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Free budget & savings tracker — static site, no backend, no build-time server dependency.",
+  "scripts": {
+    "build:css": "tailwindcss -i ./tw-input.css -o ./assets/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./tw-input.css -o ./assets/tailwind.css --watch",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "chart.js": "^4.4.4"
+  }
+}

@@ -9,11 +9,22 @@
 <meta property="og:title" content="Nerovault — Free Budget & Savings Tracker">
 <meta property="og:description" content="Track spending, schedule bills, and grow your savings — completely free, no account needed.">
 <meta property="og:type" content="website">
+<meta property="og:image" content="/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Nerovault — Free Budget & Savings Tracker">
+<meta name="twitter:description" content="Track spending, schedule bills, and grow your savings — completely free, no account needed.">
+<meta name="twitter:image" content="/assets/og-image.png">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="/">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 4 L34 9.5 V19 C34 27.5 28 33.5 20 36 C12 33.5 6 27.5 6 19 V9.5 Z' fill='%232F8F6F'/%3E%3Cpath d='M14 20.5 L18 24.5 L26 15.5' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<!-- Fonts, Tailwind build, and Chart.js are self-hosted (see /assets) so the app keeps working offline
+     and doesn't depend on third-party CDNs staying up. Rebuild tailwind.css from index.html + tw-input.css
+     with the Tailwind CLI whenever markup/classes change. -->
+<link rel="stylesheet" href="./assets/fonts.css">
+<link rel="stylesheet" href="./assets/tailwind.css">
+<script src="./assets/chart.umd.js"></script>
 <style>
   :root{
     --sage:#2F8F6F;
@@ -283,7 +294,7 @@
 
       <div class="flex items-center gap-3 flex-wrap">
         <div id="liveDate" class="text-sm text-gray-500 hidden sm:block"></div>
-        <select id="currencySelect" title="Currency" class="text-xs bg-transparent border border-gray-200 rounded-lg px-2 py-2 outline-none text-gray-500 hover:text-[var(--ink)] transition-colors">
+        <select id="currencySelect" title="Display currency — relabels and formats your existing numbers, does not convert amounts" class="text-xs bg-transparent border border-gray-200 rounded-lg px-2 py-2 outline-none text-gray-500 hover:text-[var(--ink)] transition-colors">
           <option value="PHP">₱ PHP</option>
           <option value="USD">$ USD</option>
           <option value="EUR">€ EUR</option>
@@ -904,6 +915,15 @@
 
 <script>
 (function(){
+  // Offline support: cache the app shell so Nerovault keeps working with no connection.
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {
+        // Non-fatal — app still works online without it (e.g. file:// or unsupported browser).
+      });
+    });
+  }
+
   const STORAGE_KEY = 'nerovault_data';
   const THEME_KEY = 'nerovault_theme';
   const ROLLOVER_KEY = 'nerovault_rollover';
@@ -971,12 +991,16 @@
     return d;
   }
 
-  let isFirstRun = false;
-  function loadData(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw){ isFirstRun = true; const d = defaultData(); saveData(d); return d; }
-      const p = JSON.parse(raw);
+  // ---- versioned data migrations ----
+  // Each entry upgrades a save file from its index (schemaVersion) to index+1.
+  // To change the data shape later: add a new function to the end of this array,
+  // bump SCHEMA_VERSION to match, and never edit or reorder existing entries —
+  // old backups must still replay correctly through every step.
+  const SCHEMA_VERSION = 1;
+  const MIGRATIONS = [
+    // v0 -> v1: original ad-hoc shape -> fill in every field with a safe default,
+    // rename/repair legacy bill and goal fields, normalize category percentages.
+    function migrateTo1(p){
       if(!p.categories) p.categories = JSON.parse(JSON.stringify(CATS));
       if(!p.income) p.income = [];
       if(!p.expenses) p.expenses = [];
@@ -996,9 +1020,28 @@
         if(!g.createdAt) g.createdAt = addDaysISO(-30);
       });
       return p;
+    },
+  ];
+  function runMigrations(p){
+    let version = typeof p.schemaVersion === 'number' ? p.schemaVersion : 0;
+    while(version < SCHEMA_VERSION){
+      p = MIGRATIONS[version](p);
+      version += 1;
+    }
+    p.schemaVersion = SCHEMA_VERSION;
+    return p;
+  }
+
+  let isFirstRun = false;
+  function loadData(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw){ isFirstRun = true; const d = defaultData(); d.schemaVersion = SCHEMA_VERSION; saveData(d); return d; }
+      const p = runMigrations(JSON.parse(raw));
+      return p;
     }catch(e){
       isFirstRun = true;
-      const d = defaultData(); saveData(d); return d;
+      const d = defaultData(); d.schemaVersion = SCHEMA_VERSION; saveData(d); return d;
     }
   }
   function saveData(d){
@@ -2273,8 +2316,32 @@
     lastFocusedEl = null;
   }
 
+  // ---- focus trap (keyboard users can't Tab out of an open modal onto the page behind it) ----
+  const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  function trapFocus(e){
+    const openModalEl = document.querySelector('.modal-backdrop.is-open');
+    if(!openModalEl) return;
+    const focusable = Array.from(openModalEl.querySelectorAll(FOCUSABLE_SELECTOR)).filter(el => el.offsetParent !== null);
+    if(focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if(!openModalEl.contains(document.activeElement)){
+      e.preventDefault();
+      first.focus();
+      return;
+    }
+    if(e.shiftKey && document.activeElement === first){
+      e.preventDefault();
+      last.focus();
+    }else if(!e.shiftKey && document.activeElement === last){
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   // Esc key + keyboard shortcuts
   document.addEventListener('keydown', (e) => {
+    if(e.key === 'Tab'){ trapFocus(e); return; }
     if(e.key === 'Escape'){
       if(!modal.classList.contains('hidden')) closeModal();
       if(!backupModal.classList.contains('hidden')){
@@ -2577,9 +2644,9 @@
   document.getElementById('exportCsvBtn').addEventListener('click', () => {
     const rows = [];
     rows.push('Type,Title,Amount,Date,Category,Notes');
-    data.income.forEach(i => rows.push(`Income,${csvField(i.source)},${i.amount},${i.date},${i.category || ''},`));
-    data.expenses.forEach(e => rows.push(`Expense,${csvField(e.title)},${e.amount},${e.date},${catName(data, e.category)},${csvField(e.notes || '')}`));
-    data.bills.filter(b => b.status === 'paid').forEach(b => rows.push(`Bill,${csvField(b.title)},${b.amount},${b.dueDate},${catName(data, b.category)},`));
+    data.income.forEach(i => rows.push(`Income,${csvField(i.source)},${i.amount},${i.date},${csvField(catName(data, i.category))},`));
+    data.expenses.forEach(e => rows.push(`Expense,${csvField(e.title)},${e.amount},${e.date},${csvField(catName(data, e.category))},${csvField(e.notes || '')}`));
+    data.bills.filter(b => b.status === 'paid').forEach(b => rows.push(`Bill,${csvField(b.title)},${b.amount},${b.dueDate},${csvField(catName(data, b.category))},`));
     const csv = rows.join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -2603,6 +2670,7 @@
       confirmLabel: 'Reset',
       onConfirm: () => {
         data = defaultData();
+        data.schemaVersion = SCHEMA_VERSION;
         saveData(data);
         capacityInput.value = data.budget;
         renderAll();
@@ -2619,13 +2687,7 @@
       try{
         const parsed = JSON.parse(reader.result);
         if(typeof parsed !== 'object' || parsed === null) throw new Error('invalid');
-        if(!parsed.categories) parsed.categories = JSON.parse(JSON.stringify(CATS));
-        if(!parsed.income) parsed.income = [];
-        if(!parsed.expenses) parsed.expenses = [];
-        if(!parsed.bills) parsed.bills = [];
-        if(!parsed.goals) parsed.goals = [];
-        if(typeof parsed.budget !== 'number') parsed.budget = 20000;
-        data = parsed;
+        data = runMigrations(parsed);
         saveData(data);
         runBillCheck(data);
         capacityInput.value = data.budget;
@@ -2646,6 +2708,7 @@
     updateCurrencyLabels();
     saveData(data);
     renderAll();
+    showToast('Currency symbol updated — existing amounts are relabeled, not converted.', 'default');
   });
   document.getElementById('currencySelect').value = currencyCode;
   updateCurrencyLabels();
