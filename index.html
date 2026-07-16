@@ -341,7 +341,7 @@
           <span class="text-[11px] font-semibold text-gray-500 tracking-wide">💰 NET WORTH</span>
         </div>
         <div id="netWorthStat" class="text-xl sm:text-2xl font-bold mono" style="color:var(--indigo);">₱0.00</div>
-        <p class="text-[11px] text-gray-500 mt-1.5">Assets − Set-asides</p>
+        <p class="text-[11px] text-gray-500 mt-1.5">Income − spent − bills</p>
       </div>
 
       <div class="card p-4 sm:p-5 fade-in" style="animation-delay:0.1s;">
@@ -705,7 +705,7 @@
 
       <div class="manual-section">
         <h3>Net Worth & Savings Rate</h3>
-        <p><strong>Net Worth</strong> = Total Income − (Upcoming Bills + Total Saved). It's your financial health snapshot. <strong>Savings Rate</strong> = (Total Saved ÷ Total Income) × 100 — showing what portion of your income goes toward savings.</p>
+        <p><strong>Net Worth</strong> = Total Income − (Expenses + Paid Bills + Upcoming Bills). It's your true cash position. Money you've moved into Goals or the Savings Ledger isn't subtracted — it's still yours, just set aside. <strong>Savings Rate</strong> = (Goals + Savings Ledger ÷ Total Income) × 100 — showing what portion of your income you're setting aside in total.</p>
       </div>
 
       <div class="manual-section">
@@ -734,6 +734,11 @@
       </div>
 
       <div class="manual-section">
+        <h3>Savings Ledger</h3>
+        <p>A separate running record of every peso you set aside — use it for general saving that isn't tied to one specific goal. Each entry is dated, so it's grouped by month with its own monthly total. The <strong>Savings</strong> tab shows <strong>This Month's</strong> contribution (with a trend vs last month) and your all-time <strong>Running Balance</strong>. Like Goals, every savings entry is deducted from Available immediately — it doesn't disappear at month's end, it keeps accumulating.</p>
+      </div>
+
+      <div class="manual-section">
         <h3>Backup & Restore</h3>
         <p>All data is stored in your browser. Click the ⚙️ backup icon in the header to download a .json backup file. You can restore it later on any device — just use the same file picker.</p>
       </div>
@@ -747,7 +752,7 @@
         <h3>What's New</h3>
         <ul>
           <li>💵 <strong>Net Worth</strong> — see your financial health at a glance</li>
-          <li>📊 <strong>Savings Rate %</strong> — what portion of income goes to goals</li>
+          <li>📊 <strong>Savings Rate %</strong> — what portion of income goes to Goals + Savings Ledger</li>
           <li>📆 <strong>Budget Rollover</strong> — carry unused budget forward</li>
           <li>🔍 <strong>Search highlights</strong> — matches are highlighted in results</li>
           <li>🎉 <strong>Goal confetti</strong> — celebrate when you hit a target</li>
@@ -1056,6 +1061,12 @@
     const paid = d.bills.filter(b => b.status === 'paid' && inMonth(b.dueDate)).reduce((s,b) => s + Number(b.amount), 0);
     return exp + paid;
   }
+  function monthSavingsTotal(d, monthOffset){
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    const key = target.getFullYear() + '-' + String(target.getMonth() + 1).padStart(2, '0');
+    return d.savings.filter(s => monthKey(s.date) === key).reduce((sum, s) => sum + Number(s.amount), 0);
+  }
   function renderMonthCompare(d){
     const el = document.getElementById('monthCompare');
     if(!el) return;
@@ -1128,10 +1139,14 @@
     const upcomingBills = d.bills.filter(b => b.status !== 'paid').reduce((s,i) => s + Number(i.amount), 0);
     const totalSaved = d.goals.reduce((s,g) => s + Number(g.saved), 0);
     const totalSavings = d.savings.reduce((s,v) => s + Number(v.amount), 0);
+    // grandSaved = everything set aside, whether it's tied to a Goal or logged in the
+    // freeform Savings Ledger. Both buckets are money that's still "yours" — just not
+    // sitting in the Available pool — so they should always be reported together.
+    const grandSaved = totalSaved + totalSavings;
     const available = totalIncome - totalExpenses - paidBills - totalSaved - totalSavings - upcomingBills;
     const spent = totalExpenses + paidBills;
     const committed = upcomingBills + totalSaved + totalSavings;
-    return { totalIncome, totalExpenses, paidBills, upcomingBills, totalSaved, totalSavings, available, spent, committed };
+    return { totalIncome, totalExpenses, paidBills, upcomingBills, totalSaved, totalSavings, grandSaved, available, spent, committed };
   }
 
   function daysLeftInMonth(){
@@ -1218,15 +1233,20 @@
     animateValue(document.getElementById('availableStat'), t.available, CURRENCIES[currencyCode]?.symbol || '₱', '', statAnimDuration);
     animateValue(document.getElementById('upcomingStat'), t.upcomingBills, CURRENCIES[currencyCode]?.symbol || '₱', '', statAnimDuration);
 
-    // Net worth = totalIncome - upcomingBills - totalSaved
-    const netWorth = t.totalIncome - t.upcomingBills - t.totalSaved;
+    // Net worth = money you've earned minus everything actually spent or committed
+    // (paid bills, logged expenses, upcoming bills). Money moved into Goals or the
+    // Savings Ledger is NOT subtracted here — it hasn't left you, it's just sitting
+    // in a different bucket than "available to spend".
+    const netWorth = t.totalIncome - t.totalExpenses - t.paidBills - t.upcomingBills;
     animateValue(document.getElementById('netWorthStat'), netWorth, CURRENCIES[currencyCode]?.symbol || '₱', '', statAnimDuration);
 
-    animateValue(document.getElementById('savedStat'), t.totalSaved, CURRENCIES[currencyCode]?.symbol || '₱', '', statAnimDuration);
+    // SAVED = Goals + the standalone Savings Ledger combined, so this card always
+    // matches what the Savings Ledger tab reports as the running balance.
+    animateValue(document.getElementById('savedStat'), t.grandSaved, CURRENCIES[currencyCode]?.symbol || '₱', '', statAnimDuration);
 
     // Savings rate
     const srEl = document.getElementById('savingsRate');
-    const savingsRate = t.totalIncome > 0 ? Math.round((t.totalSaved / t.totalIncome) * 100) : 0;
+    const savingsRate = t.totalIncome > 0 ? Math.round((t.grandSaved / t.totalIncome) * 100) : 0;
     srEl.textContent = savingsRate + '% savings rate';
 
     const days = daysLeftInMonth();
@@ -1498,6 +1518,20 @@
       if(monthKey(s.date) === currentMonth) thisMonthContrib += amt;
     });
 
+    // vs last month, so the "This Month" number has some momentum context
+    const lastMonthContrib = monthSavingsTotal(d, -1);
+    let trendHtml = '<span class="text-gray-400">No activity last month</span>';
+    if(lastMonthContrib > 0 || thisMonthContrib > 0){
+      const delta = thisMonthContrib - lastMonthContrib;
+      if(delta > 0){
+        trendHtml = `<span style="color:var(--sage);">▲ ${peso(delta)} vs last month</span>`;
+      } else if(delta < 0){
+        trendHtml = `<span style="color:var(--danger);">▼ ${peso(Math.abs(delta))} vs last month</span>`;
+      } else {
+        trendHtml = `<span class="text-gray-400">Same as last month</span>`;
+      }
+    }
+
     // Overview cards
     const overview = document.createElement('div');
     overview.className = 'grid grid-cols-2 gap-2.5 mb-4';
@@ -1505,7 +1539,7 @@
       <div class="rounded-xl border border-gray-100 p-3.5 text-center" style="background:var(--sage-soft);">
         <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">This Month</p>
         <p class="text-lg font-bold mono mt-1" style="color:var(--sage);">${peso(thisMonthContrib)}</p>
-        <p class="text-[10px] text-gray-500 mt-0.5">savings contribution</p>
+        <p class="text-[10px] mt-0.5">${trendHtml}</p>
       </div>
       <div class="rounded-xl border border-gray-100 p-3.5 text-center" style="background:var(--lavender-soft);">
         <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Running Balance</p>
@@ -1549,6 +1583,9 @@
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-xs font-bold mono whitespace-nowrap" style="color:var(--sage);">${peso(e.amount)}</span>
+                <button data-action="editsaving" data-id="${e.id}" class="text-gray-300 hover:text-[var(--sage)] transition-colors" title="Edit">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                </button>
                 <button data-action="delsaving" data-id="${e.id}" class="text-gray-300 hover:text-[var(--danger)] transition-colors" title="Remove">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
@@ -1878,7 +1915,7 @@
     }
 
     // ---- edit actions ----
-    if(action === 'editincome' || action === 'editexpense' || action === 'editbill' || action === 'editgoal'){
+    if(action === 'editincome' || action === 'editexpense' || action === 'editbill' || action === 'editgoal' || action === 'editsaving'){
       openModal({ type: action.replace('edit',''), id });
       return;
     }
@@ -2007,6 +2044,7 @@
   }
   document.getElementById('tab-bills-list').addEventListener('click', handleDelegatedClick);
   document.getElementById('tab-goals-list').addEventListener('click', handleDelegatedClick);
+  document.getElementById('tab-savings-list').addEventListener('click', handleDelegatedClick);
   document.getElementById('tab-feed-list').addEventListener('click', handleDelegatedClick);
   document.getElementById('categoryList').addEventListener('click', handleDelegatedClick);
   // Also listen on parent containers for delegate
@@ -2102,10 +2140,13 @@
     document.getElementById('goalName').value = '';
     document.getElementById('goalTarget').value = '';
     document.getElementById('goalDeadline').value = '';
+    document.getElementById('svLabel').value = '';
+    document.getElementById('svAmount').value = '';
+    document.getElementById('svDate').value = isoToday();
 
     if(editingId && opts && opts.type){
       const type = opts.type;
-      document.getElementById('addModalTitle').textContent = type === 'income' ? 'Edit income' : type === 'expense' ? 'Edit expense' : type === 'bill' ? 'Edit bill' : 'Edit goal';
+      document.getElementById('addModalTitle').textContent = type === 'income' ? 'Edit income' : type === 'expense' ? 'Edit expense' : type === 'bill' ? 'Edit bill' : type === 'saving' ? 'Edit savings entry' : 'Edit goal';
       if(type === 'income'){
         const item = data.income.find(x => x.id === editingId);
         if(item){ document.getElementById('incSource').value = item.source; document.getElementById('incAmount').value = item.amount; document.getElementById('incDate').value = item.date; document.getElementById('incRecurring').checked = !!item.recurring; }
@@ -2118,6 +2159,9 @@
       } else if(type === 'goal'){
         const item = data.goals.find(x => x.id === editingId);
         if(item){ document.getElementById('goalName').value = item.name; document.getElementById('goalTarget').value = item.target; document.getElementById('goalDeadline').value = item.deadline || ''; }
+      } else if(type === 'saving'){
+        const item = data.savings.find(x => x.id === editingId);
+        if(item){ document.getElementById('svLabel').value = item.label; document.getElementById('svAmount').value = item.amount; document.getElementById('svDate').value = item.date; }
       }
     } else {
       document.getElementById('addModalTitle').textContent = 'Add something';
@@ -2211,8 +2255,14 @@
       const amount = parseFloat(document.getElementById('svAmount').value);
       const date = document.getElementById('svDate').value;
       if(!label || !amount || amount <= 0 || !date) return;
-      data.savings.push({ id: uid(), label, amount, date });
-      toastMsg = `Saved ${peso(amount)} to "${label}".`;
+      if(editingId){
+        const item = data.savings.find(x => x.id === editingId);
+        if(item){ item.label = label; item.amount = amount; item.date = date; }
+        toastMsg = `Savings entry updated.`;
+      } else {
+        data.savings.push({ id: uid(), label, amount, date });
+        toastMsg = `Saved ${peso(amount)} to "${label}".`;
+      }
     } else if(activeFieldTab === 'goal'){
       const name = document.getElementById('goalName').value.trim();
       const target = parseFloat(document.getElementById('goalTarget').value);
