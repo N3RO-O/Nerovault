@@ -707,6 +707,17 @@
       </button>
     </div>
 
+    <div class="flex flex-wrap gap-1.5 mb-4 pb-4 border-b border-gray-100">
+      <button type="button" data-jump="help-income" class="chip text-[11px] px-2.5 py-1 rounded-full border" data-active="false">Income</button>
+      <button type="button" data-jump="help-expenses" class="chip text-[11px] px-2.5 py-1 rounded-full border" data-active="false">Expenses</button>
+      <button type="button" data-jump="help-bills" class="chip text-[11px] px-2.5 py-1 rounded-full border" data-active="false">Bills</button>
+      <button type="button" data-jump="help-goals" class="chip text-[11px] px-2.5 py-1 rounded-full border" data-active="false">Goals</button>
+      <button type="button" data-jump="help-ledger" class="chip text-[11px] px-2.5 py-1 rounded-full border" data-active="false">Savings ledger</button>
+      <button type="button" data-jump="help-networth" class="chip text-[11px] px-2.5 py-1 rounded-full border" data-active="false">Net worth</button>
+      <button type="button" data-jump="help-backup" class="chip text-[11px] px-2.5 py-1 rounded-full border" data-active="false">Backup</button>
+      <button type="button" data-jump="help-faq" class="chip text-[11px] px-2.5 py-1 rounded-full border" data-active="false">FAQ</button>
+    </div>
+
     <div class="space-y-5">
       <div class="manual-section">
         <h3>What is Nerovault?</h3>
@@ -723,44 +734,71 @@
         </ol>
       </div>
 
-      <div class="manual-section">
+      <div class="manual-section" id="help-income">
+        <h3>Income</h3>
+        <p>Log any money you receive — salary, allowance, freelance pay, gifts. Turn on <strong>Repeat monthly</strong> when adding it and Nerovault will add it again automatically at the start of each new month, so you don't have to re-enter it.</p>
+      </div>
+
+      <div class="manual-section" id="help-expenses">
+        <h3>Expenses</h3>
+        <p>Every expense belongs to a category. The category progress bars show how much of that category's budget you've used so far this month.</p>
+        <ul>
+          <li><span class="inline-block w-2 h-2 rounded-full align-middle mr-1" style="background:var(--sage)"></span>Under 90% used — on track</li>
+          <li><span class="inline-block w-2 h-2 rounded-full align-middle mr-1" style="background:var(--amber)"></span>90–99% used — almost at your limit</li>
+          <li><span class="inline-block w-2 h-2 rounded-full align-middle mr-1" style="background:var(--danger)"></span>100%+ used — over budget for that category</li>
+        </ul>
+      </div>
+
+      <div class="manual-section" id="help-bills">
+        <h3>Bills</h3>
+        <p>Schedule bills with due dates. Each one moves through three stages automatically:</p>
+        <p class="flex flex-wrap items-center gap-1.5 my-1.5">
+          <span class="text-[10px] font-semibold px-2 py-1 rounded-md inline-flex items-center gap-1" style="background:var(--amber-soft); color:#8A5F14;"><span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--amber)"></span>Not yet due</span>
+          <span>→</span>
+          <span class="text-[10px] font-semibold px-2 py-1 rounded-md inline-flex items-center gap-1" style="background:var(--sage-soft); color:#1F6B50;"><span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--sage)"></span>Ready to pay</span>
+          <span>→</span>
+          <span class="text-[10px] font-semibold px-2 py-1 rounded-md inline-flex items-center gap-1" style="background:#F2F0EA; color:#6B6659;"><span class="w-1.5 h-1.5 rounded-full inline-block" style="background:#94A3B8"></span>Paid</span>
+        </p>
+        <p>A bill becomes <strong>Ready to pay</strong> on its due date — tap <strong>Mark as paid</strong> once you've paid it. Recurring bills auto-generate each month. Use the sort dropdown to order the list by due date or amount.</p>
+      </div>
+
+      <div class="manual-section" id="help-goals">
+        <h3>Savings Goals</h3>
+        <p>Set a target amount and an optional deadline for something specific — a trip, a gadget, an emergency fund. Add funds to it whenever you like. Nerovault shows your <strong>pace</strong>: roughly how long you'll take to reach the goal at your current saving rate. Hit the target and you get a confetti celebration 🎉</p>
+      </div>
+
+      <div class="manual-section" id="help-ledger">
+        <h3>Savings Ledger</h3>
+        <p>A separate running record for general saving that isn't tied to one specific goal — think of it as your overall "set aside" pile. Entries are grouped by month. The <strong>Savings</strong> tab shows what you've added <strong>this month</strong> (with a trend vs. last month) and your all-time <strong>Running Balance</strong>.</p>
+      </div>
+
+      <div class="manual-section" id="help-networth">
         <h3>Net Worth & Savings Rate</h3>
-        <p><strong>Net Worth</strong> = Total Income − (Expenses + Paid Bills + Upcoming Bills). It's your true cash position. Money you've moved into Goals or the Savings Ledger isn't subtracted — it's still yours, just set aside. <strong>Savings Rate</strong> = (Goals + Savings Ledger ÷ Total Income) × 100 — showing what portion of your income you're setting aside in total.</p>
+        <p>These two numbers answer two different questions:</p>
+        <ul>
+          <li><strong>Net Worth</strong> — "How much cash do I actually have?" Everything you've earned, minus everything you've spent and every bill (paid or upcoming).</li>
+          <li><strong>Savings Rate</strong> — "What share of my income am I setting aside?" Money in Goals and the Savings Ledger, as a percentage of total income.</li>
+        </ul>
+        <p class="mt-2" style="background:var(--sage-soft); border-radius:8px; padding:8px 10px; color:#1F6B50;">
+          Example: you received <span id="helpNWIncome">₱20,000.00</span> and your expenses plus bills add up to <span id="helpNWSpent">₱12,000.00</span>. Your Net Worth is <span id="helpNWResult">₱8,000.00</span> — money set aside in Goals or the Savings Ledger is still counted as yours, so it isn't subtracted.
+        </p>
+        <p class="mt-2 text-gray-400">Formula, if you want it: Net Worth = Income − (Expenses + Paid Bills + Upcoming Bills). Savings Rate = (Goals + Savings Ledger) ÷ Income × 100.</p>
       </div>
 
       <div class="manual-section">
         <h3>Budget Rollover</h3>
-        <p>When enabled, any unused budget from this month carries forward to next month. Perfect if you want to save up for bigger purchases over time.</p>
+        <p>Off by default. Turn it on in Settings and any budget you don't spend this month carries forward into next month instead of resetting — useful if you're saving up for something bigger than one month's budget.</p>
       </div>
 
-      <div class="manual-section">
-        <h3>Income</h3>
-        <p>Log any money you receive — salary, allowance, freelance pay, gifts. You can mark income as recurring (monthly) so Nerovault automatically adds it each new month.</p>
-      </div>
-
-      <div class="manual-section">
-        <h3>Expenses</h3>
-        <p>Every expense belongs to a category. The category progress bars show how much of your budget allocation you've used. If you go over, the bar turns red and you'll see a warning.</p>
-      </div>
-
-      <div class="manual-section">
-        <h3>Bills</h3>
-        <p>Schedule bills with due dates. Bills start as <strong>Locked</strong> (future), become <strong>Ready</strong> on their due date, and you can mark them <strong>Paid</strong>. Recurring bills auto-generate each month. Sort by date or amount using the sort dropdown.</p>
-      </div>
-
-      <div class="manual-section">
-        <h3>Savings Goals</h3>
-        <p>Set a target amount and optional deadline. Add funds to your goal over time. Nerovault shows you your pace — how long until you'll reach your goal at your current saving rate. When you reach a goal, confetti celebration! 🎉</p>
-      </div>
-
-      <div class="manual-section">
-        <h3>Savings Ledger</h3>
-        <p>A separate running record of every peso you set aside — use it for general saving that isn't tied to one specific goal. Each entry is dated, so it's grouped by month with its own monthly total. The <strong>Savings</strong> tab shows <strong>This Month's</strong> contribution (with a trend vs last month) and your all-time <strong>Running Balance</strong>. Like Goals, every savings entry is deducted from Available immediately — it doesn't disappear at month's end, it keeps accumulating.</p>
-      </div>
-
-      <div class="manual-section">
+      <div class="manual-section" id="help-backup">
         <h3>Backup & Restore</h3>
-        <p>All data is stored in your browser. Click the ⚙️ backup icon in the header to download a .json backup file. You can restore it later on any device — just use the same file picker.</p>
+        <p>All your data lives only in this browser — nothing is uploaded anywhere. That also means clearing your browser data or switching devices/browsers will lose it, unless you back up first.</p>
+        <ol>
+          <li>Open the ⚙️ icon in the header → <strong>Backup & Restore</strong>.</li>
+          <li><strong>Download backup</strong> saves a <code>.json</code> file — keep it somewhere safe (cloud drive, email to yourself, etc).</li>
+          <li>To restore, open the same panel on any device and choose that file.</li>
+        </ol>
+        <p class="text-gray-400">Tip: back up right after making a lot of changes, and again every so often.</p>
       </div>
 
       <div class="manual-section">
@@ -768,20 +806,17 @@
         <p>Press <kbd style="background:#F2F0EA; padding:1px 6px; border-radius:4px; font-size:11px;">N</kbd> to open the Add modal, <kbd style="background:#F2F0EA; padding:1px 6px; border-radius:4px; font-size:11px;">?</kbd> for help, <kbd style="background:#F2F0EA; padding:1px 6px; border-radius:4px; font-size:11px;">Esc</kbd> to close modals.</p>
       </div>
 
+      <div class="manual-section" id="help-faq">
+        <h3>Frequently asked questions</h3>
+        <p><strong>Why is my "Available" amount negative?</strong><br>You've spent more than your budget allocates for this month (or a category is over its limit). It's not an error — it's telling you spending has outpaced budget.</p>
+        <p class="mt-2"><strong>Does changing currency convert my amounts?</strong><br>No. It only changes the symbol and number formatting shown. A "20,000" doesn't become a different real amount — Nerovault doesn't do currency conversion.</p>
+        <p class="mt-2"><strong>I cleared my browser history/cache — where did my data go?</strong><br>Since everything is stored locally in the browser, clearing site data removes it. This is why regular backups matter (see above).</p>
+        <p class="mt-2"><strong>Can I use this on more than one device?</strong><br>Each browser/device keeps its own separate data. Use Backup & Restore to move data between them — there's no automatic sync.</p>
+      </div>
+
       <div class="manual-section">
-        <h3>What's New</h3>
-        <ul>
-          <li>💵 <strong>Net Worth</strong> — see your financial health at a glance</li>
-          <li>📊 <strong>Savings Rate %</strong> — what portion of income goes to Goals + Savings Ledger</li>
-          <li>📆 <strong>Budget Rollover</strong> — carry unused budget forward</li>
-          <li>🔍 <strong>Search highlights</strong> — matches are highlighted in results</li>
-          <li>🎉 <strong>Goal confetti</strong> — celebrate when you hit a target</li>
-          <li>📱 <strong>FAB</strong> — floating add button on mobile</li>
-          <li>📝 <strong>Expense notes</strong> — add details to any expense</li>
-          <li>⚡ <strong>Budget presets</strong> — 50/30/20, 70/20/10, and more</li>
-          <li>↕️ <strong>Bill sorting</strong> — by due date or amount</li>
-          <li>📈 <strong>Spending sparkline</strong> — last 6 months at a glance</li>
-        </ul>
+        <h3>Recently added</h3>
+        <p class="text-gray-400">Net Worth & Savings Rate stats, Budget Rollover, Bill sorting, expense notes, budget presets (50/30/20 etc), and a 6-month spending sparkline.</p>
       </div>
 
       <p class="text-[10px] text-gray-400 pt-2 border-t border-gray-100">Need more help? Open an issue on GitHub or reach out to the developer.</p>
@@ -954,6 +989,10 @@
     ['budgetCurrencySymbol','onboardCurrencySymbol'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = c.symbol; });
     ['incAmountLabel','expAmountLabel','billAmountLabel'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = `Amount (${c.symbol})`; });
     const goalLabel = document.getElementById('goalTargetLabel'); if(goalLabel) goalLabel.textContent = `Target (${c.symbol})`;
+    // Keep the worked example in the help manual in the user's chosen currency/format.
+    const nwIncome = document.getElementById('helpNWIncome'); if(nwIncome) nwIncome.textContent = peso(20000);
+    const nwSpent = document.getElementById('helpNWSpent'); if(nwSpent) nwSpent.textContent = peso(12000);
+    const nwResult = document.getElementById('helpNWResult'); if(nwResult) nwResult.textContent = peso(8000);
   }
 
   const CATS = [
@@ -2480,6 +2519,12 @@
   document.getElementById('helpBtn').addEventListener('click', openHelpModal);
   document.getElementById('closeHelpBtn').addEventListener('click', closeHelpModal);
   helpModal.addEventListener('click', (e) => { if(e.target === helpModal) closeHelpModal(); });
+  helpModal.querySelectorAll('[data-jump]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.jump);
+      if(target && typeof target.scrollIntoView === 'function') target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
 
   // ---- re-check bill due dates periodically ----
   setInterval(() => { if(runBillCheck(data)) renderAll(); }, 60000);
