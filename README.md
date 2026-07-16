@@ -41,6 +41,56 @@ npm run build:css
 npm run serve   # http://localhost:8080
 ```
 
+Service workers work on `localhost` without HTTPS, so this is enough to test the
+offline/install behavior locally. Opening `index.html` directly by double-clicking it
+(`file://`) will **not** register the service worker — browsers require `http(s)`.
+
+## Deploying so it's a real installable app
+
+A service worker (and therefore "Add to Home Screen" / install) only works over
+**HTTPS**, or on `localhost`. You need to host these files somewhere with HTTPS —
+any static host works, since there's no backend. Free options, easiest first:
+
+**Cloudflare Pages / Netlify (drag-and-drop, no account setup beyond signup)**
+1. Run `npm install && npm run build:css` once, so `assets/tailwind.css` is fresh.
+2. Go to the Pages/Netlify dashboard, choose "deploy manually", and drag the whole
+   project folder in.
+3. You get a `https://something.pages.dev` (or `.netlify.app`) URL with HTTPS already
+   set up — done.
+
+**GitHub Pages**
+1. Push this folder to a GitHub repo.
+2. Repo Settings → Pages → deploy from the `main` branch, root folder.
+3. Your site is `https://yourusername.github.io/reponame/`. Because that's a
+   **subpath**, not the domain root, and every asset link in this project is already
+   relative (`./assets/...`, `./manifest.json`), it works as-is — no path edits needed.
+4. Replace `REPLACE-WITH-YOUR-DOMAIN` in `index.html`'s `og:image`/`twitter:image`/
+   `canonical` tags with your real GitHub Pages URL (those specific tags need a full
+   absolute URL, unlike everything else in the file, since social platforms can't
+   resolve relative image paths).
+
+**Vercel** — `vercel deploy` from the folder also works with zero config, same idea.
+
+## Installing it once it's hosted
+
+- **Android / desktop Chrome, Edge, Brave**: an **Install app** button appears in
+  Nerovault's own header once the browser decides the site is installable (valid
+  manifest + service worker + HTTPS — the three things this project already has).
+  You can also use the install icon in the browser's address bar.
+- **iPhone/iPad (Safari)**: iOS has no install-prompt API, so there's no button to
+  click — open the site in Safari, tap the Share icon, then **Add to Home Screen**.
+  This is called out in the app's own Help → FAQ section too.
+- Once installed, it opens in its own window with no browser chrome, has its own
+  home-screen/app-drawer icon, and keeps working offline via the service worker.
+
+## Updating a deployed/installed app later
+
+Editing `index.html`, `assets/tailwind.css`, or anything else the service worker
+caches won't reach people who already installed the app until you **bump
+`CACHE_VERSION` in `sw.js`** (currently `nerovault-v2`) and redeploy. The old cache
+gets cleared and the new files fetched automatically the next time they open the app
+with a connection.
+
 ## Bumping the offline cache
 
 `sw.js` caches the app shell by filename list. If you change any cached file's

@@ -9,15 +9,17 @@
 <meta property="og:title" content="Nerovault — Free Budget & Savings Tracker">
 <meta property="og:description" content="Track spending, schedule bills, and grow your savings — completely free, no account needed.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="/assets/og-image.png">
+<!-- og:image / twitter:image / canonical must be FULL absolute URLs (https://yourdomain.com/...) once
+     you deploy — social platforms won't resolve relative paths. Fill these in after hosting. -->
+<meta property="og:image" content="https://REPLACE-WITH-YOUR-DOMAIN/assets/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Nerovault — Free Budget & Savings Tracker">
 <meta name="twitter:description" content="Track spending, schedule bills, and grow your savings — completely free, no account needed.">
-<meta name="twitter:image" content="/assets/og-image.png">
+<meta name="twitter:image" content="https://REPLACE-WITH-YOUR-DOMAIN/assets/og-image.png">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="/">
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<link rel="canonical" href="https://REPLACE-WITH-YOUR-DOMAIN/">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./assets/icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 4 L34 9.5 V19 C34 27.5 28 33.5 20 36 C12 33.5 6 27.5 6 19 V9.5 Z' fill='%232F8F6F'/%3E%3Cpath d='M14 20.5 L18 24.5 L26 15.5' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
 <!-- Fonts, Tailwind build, and Chart.js are self-hosted (see /assets) so the app keeps working offline
      and doesn't depend on third-party CDNs staying up. Rebuild tailwind.css from index.html + tw-input.css
@@ -302,6 +304,10 @@
           <option value="JPY">¥ JPY</option>
           <option value="INR">₹ INR</option>
         </select>
+        <button id="installBtn" class="hidden items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-white" style="background:var(--sage);" title="Install Nerovault as an app">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          Install app
+        </button>
         <button id="helpBtn" class="text-gray-400 hover:text-[var(--ink)] transition-colors p-2 rounded-lg hover:bg-black/5" title="User manual & help (?)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
         </button>
@@ -812,6 +818,7 @@
         <p class="mt-2"><strong>Does changing currency convert my amounts?</strong><br>No. It only changes the symbol and number formatting shown. A "20,000" doesn't become a different real amount — Nerovault doesn't do currency conversion.</p>
         <p class="mt-2"><strong>I cleared my browser history/cache — where did my data go?</strong><br>Since everything is stored locally in the browser, clearing site data removes it. This is why regular backups matter (see above).</p>
         <p class="mt-2"><strong>Can I use this on more than one device?</strong><br>Each browser/device keeps its own separate data. Use Backup & Restore to move data between them — there's no automatic sync.</p>
+        <p class="mt-2"><strong>Can I install this as an app?</strong><br>Yes. On Android/desktop Chrome or Edge, tap the <strong>Install app</strong> button in the header (or the install icon in the address bar). On iPhone/iPad, open this page in Safari, tap the Share icon, then <strong>Add to Home Screen</strong> — Safari doesn't support one-tap install buttons.</p>
       </div>
 
       <div class="manual-section">
@@ -958,6 +965,35 @@
       });
     });
   }
+
+  // ---- installable app prompt (Chrome/Edge/Android) ----
+  // iOS Safari never fires this event — it has no install prompt API, users add
+  // Nerovault via Share -> Add to Home Screen instead, which is covered in the manual.
+  let deferredInstallPrompt = null;
+  const installBtn = document.getElementById('installBtn');
+  const isStandalone = (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if(!isStandalone && installBtn){
+      installBtn.classList.remove('hidden');
+      installBtn.classList.add('flex');
+    }
+  });
+  if(installBtn){
+    installBtn.addEventListener('click', async () => {
+      if(!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      installBtn.classList.add('hidden');
+      installBtn.classList.remove('flex');
+    });
+  }
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    if(installBtn){ installBtn.classList.add('hidden'); installBtn.classList.remove('flex'); }
+  });
 
   const STORAGE_KEY = 'nerovault_data';
   const THEME_KEY = 'nerovault_theme';
