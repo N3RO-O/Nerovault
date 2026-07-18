@@ -1,6 +1,6 @@
 // Nerovault service worker — caches the app shell so the tracker works fully offline.
 // Bump CACHE_VERSION whenever any cached file changes so clients pick up the update.
-const CACHE_VERSION = 'nerovault-v1';
+const CACHE_VERSION = 'nerovault-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -10,6 +10,9 @@ const APP_SHELL = [
   './assets/chart.umd.js',
   './assets/icon-192.png',
   './assets/icon-512.png',
+  './assets/icon-192-maskable.png',
+  './assets/icon-512-maskable.png',
+  './assets/apple-touch-icon.png',
   './assets/fonts/inter-latin-400-normal.woff2',
   './assets/fonts/inter-latin-500-normal.woff2',
   './assets/fonts/inter-latin-600-normal.woff2',

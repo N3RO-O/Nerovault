@@ -19,8 +19,8 @@
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://bucolic-tapioca-779eea.netlify.app/">
 <link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./assets/icon-192.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 4 L34 9.5 V19 C34 27.5 28 33.5 20 36 C12 33.5 6 27.5 6 19 V9.5 Z' fill='%232F8F6F'/%3E%3Cpath d='M14 20.5 L18 24.5 L26 15.5' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png">
 <!-- Fonts, Tailwind build, and Chart.js are self-hosted (see /assets) so the app keeps working offline
      and doesn't depend on third-party CDNs staying up. Rebuild tailwind.css from index.html + tw-input.css
      with the Tailwind CLI whenever markup/classes change. -->
@@ -194,6 +194,45 @@
   .chip[data-active="false"]{ background:transparent; color:#8A8578; border-color:var(--border); }
   .chip:hover:not([data-active="true"]){ border-color:#C9C5BB; background:rgba(0,0,0,0.02); }
 
+  /* Compact color swatch picker — a small round trigger + popover of curated swatches,
+     replacing the native <input type=color> which renders as a big stretched bar
+     (especially on mobile). */
+  .color-swatch-trigger{
+    width:40px; height:40px; border-radius:10px; border:2px solid var(--border);
+    cursor:pointer; display:block; padding:0; transition:transform 0.15s ease;
+  }
+  .color-swatch-trigger:hover{ transform:scale(1.06); }
+  .color-swatch-panel{
+    position:absolute; z-index:40; top:calc(100% + 6px); left:0;
+    background:var(--card-bg); border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 14px 32px -10px rgba(20,24,28,0.28); padding:10px;
+    display:grid; grid-template-columns:repeat(6, 1fr); gap:8px;
+    width:212px; max-width:min(212px, calc(100vw - 32px));
+  }
+  .color-swatch-panel.hidden{ display:none; }
+  .color-swatch-dot{
+    width:24px; height:24px; border-radius:9999px; border:2px solid transparent;
+    cursor:pointer; padding:0; transition:transform 0.12s ease;
+    justify-self:center;
+  }
+  .color-swatch-dot:hover{ transform:scale(1.15); }
+  .color-swatch-dot[data-selected="true"]{ box-shadow:0 0 0 2px var(--card-bg), 0 0 0 3.5px var(--ink); }
+  .color-swatch-custom-row{
+    grid-column:1 / -1; display:flex; align-items:center; gap:6px;
+    margin-top:2px; padding-top:8px; border-top:1px solid var(--border-light);
+  }
+  .color-swatch-custom-input{
+    width:26px; height:26px; padding:0; border:2px solid var(--border); border-radius:9999px;
+    background:transparent; cursor:pointer; flex-shrink:0;
+  }
+
+  /* % of budget vs Fixed ₱ mode toggle in the category edit form */
+  .cat-mode-btn{ cursor:pointer; border:none; transition:all 0.15s ease; }
+  .cat-mode-btn[data-active="true"]{ background:var(--sage); color:#fff; }
+  .cat-mode-btn[data-active="false"]{ background:transparent; color:var(--ink-soft); }
+  .cat-mode-btn[data-active="false"]:hover{ background:rgba(0,0,0,0.04); }
+  html.dark .cat-mode-btn[data-active="false"]:hover{ background:rgba(255,255,255,0.05); }
+
   /* Auto-save pulse */
   @keyframes pulseGlow{
     0%, 100%{ opacity:0.6; } 50%{ opacity:1; }
@@ -250,10 +289,18 @@
   mark{ background:#FBF1DF; color:var(--ink); border-radius:2px; padding:0 2px; }
   html.dark mark{ background:#3A3520; color:#EDEEEF; }
 
-  /* Mobile responsiveness for FAB */
+  /* Mobile responsiveness for FAB + compact category color picker */
   @media (max-width:640px){
     .fab{ display:flex; }
     .panel-scroll{ max-height:320px; }
+    /* Keep the color popover tucked under its trigger and within the screen so it
+       never stretches across / overflows the viewport on phones. */
+    .color-swatch-panel{
+      width:auto; left:0; right:auto; max-width:calc(100vw - 32px);
+      grid-template-columns:repeat(6, 1fr); gap:7px; padding:9px;
+    }
+    .color-swatch-dot{ width:22px; height:22px; }
+    .color-swatch-trigger{ width:36px; height:36px; }
   }
 </style>
 </head>
@@ -280,10 +327,7 @@
   <header class="px-5 sm:px-8 py-5 border-b border-black/5">
     <div class="max-w-[1400px] mx-auto flex items-center justify-between gap-4 flex-wrap">
       <div class="flex items-center gap-3">
-        <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
-          <path d="M20 4 L34 9.5 V19 C34 27.5 28 33.5 20 36 C12 33.5 6 27.5 6 19 V9.5 Z" stroke="#2F8F6F" stroke-width="1.6" fill="#E7F3EE"/>
-          <path d="M14 20.5 L18 24.5 L26 15.5" stroke="#2F8F6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
+        <img src="./assets/icon-192.png" width="36" height="36" alt="Nerovault logo" class="rounded-[9px] flex-shrink-0" style="width:36px; height:36px; object-fit:contain;">
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-xl sm:text-2xl font-extrabold text-[var(--ink)] leading-none tracking-tight">Nerovault</h1>
@@ -420,13 +464,13 @@
           </button>
 
           <div id="customCatsBody" class="mt-3">
-            <div class="grid grid-cols-1 sm:grid-cols-[1fr_140px_90px] gap-3">
+            <div class="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
               <input id="newCatName" type="text" placeholder="Category name" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
-              <input id="newCatColor" type="color" value="#2F8F6F" class="w-full h-[44px] bg-transparent border border-gray-200 rounded-lg p-1">
-              <button id="addCatBtn" class="btn-primary text-white text-sm font-semibold px-4 py-2.5 rounded-lg">Add</button>
+              <div id="newCatColorWrap" class="flex-shrink-0"></div>
+              <button id="addCatBtn" class="btn-primary text-white text-sm font-semibold px-4 py-2.5 rounded-lg flex-shrink-0">Add</button>
             </div>
             <p id="customCatHint" class="text-[11px] text-gray-500 mt-2">Tip: new categories appear instantly. Hover to edit or delete — deleting asks you to confirm.</p>
-            <p class="text-[11px] text-gray-500 mt-1">Percents auto‑normalize to 100%.</p>
+            <p class="text-[11px] text-gray-500 mt-1">New categories start as a % of budget — tap the ✎ on any category to switch it to an exact ₱ amount instead (e.g. ₱2,000, no percentages needed). Percentages auto‑adjust to add up to 100%.</p>
           </div>
         </div>
 
@@ -548,6 +592,7 @@
       </p>
       <p class="text-[10px] text-gray-400">Secure local client-side architecture. No database footprint.</p>
       <p id="dataSummary" class="text-[10px] text-gray-400 mt-1"></p>
+      <p class="text-[10px] text-gray-400 mt-1">Version <span id="appVersion">1.0.2</span></p>
     </div>
   </footer>
 
@@ -702,10 +747,7 @@
   <div class="card w-full max-w-lg p-6 scale-in" style="max-height:85vh; overflow-y:auto;">
     <div class="flex items-center justify-between mb-5">
       <div class="flex items-center gap-2.5">
-        <svg width="26" height="26" viewBox="0 0 40 40" fill="none">
-          <path d="M20 4 L34 9.5 V19 C34 27.5 28 33.5 20 36 C12 33.5 6 27.5 6 19 V9.5 Z" stroke="#2F8F6F" stroke-width="1.6" fill="#E7F3EE"/>
-          <path d="M14 20.5 L18 24.5 L26 15.5" stroke="#2F8F6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
+        <img src="./assets/icon-192.png" width="26" height="26" alt="Nerovault logo" class="rounded-[7px] flex-shrink-0" style="width:26px; height:26px; object-fit:contain;">
         <h3 id="helpModalTitle" class="text-base font-bold text-[var(--ink)]">Nerovault Help</h3>
       </div>
       <button id="closeHelpBtn" class="text-gray-400 hover:text-gray-700 transition-colors">
@@ -823,7 +865,7 @@
 
       <div class="manual-section">
         <h3>Recently added</h3>
-        <p class="text-gray-400">Net Worth & Savings Rate stats, Budget Rollover, Bill sorting, expense notes, budget presets (50/30/20 etc), and a 6-month spending sparkline.</p>
+        <p class="text-gray-400">Net Worth & Savings Rate stats, Budget Rollover, Bill sorting, expense notes, budget presets (50/30/20 etc) that now apply to your custom categories, per-category theme colors, fixed-₱ amounts (set an exact peso instead of a %), and a 6-month spending sparkline.</p>
       </div>
 
       <p class="text-[10px] text-gray-400 pt-2 border-t border-gray-100">Need more help? Open an issue on GitHub or reach out to the developer.</p>
@@ -888,10 +930,7 @@
 
     <div id="onboardStep1">
       <div class="flex items-center gap-3 mb-4">
-        <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
-          <path d="M20 4 L34 9.5 V19 C34 27.5 28 33.5 20 36 C12 33.5 6 27.5 6 19 V9.5 Z" stroke="#2F8F6F" stroke-width="1.6" fill="#E7F3EE"/>
-          <path d="M14 20.5 L18 24.5 L26 15.5" stroke="#2F8F6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
+        <img src="./assets/icon-192.png" width="34" height="34" alt="Nerovault logo" class="rounded-[9px] flex-shrink-0" style="width:34px; height:34px; object-fit:contain;">
         <h3 class="text-lg font-bold text-[var(--ink)]">Welcome to Nerovault</h3>
       </div>
       <p class="text-sm text-gray-500 mb-5 leading-relaxed">A free, private budget tracker — everything stays on this device, no sign-up needed. Let's set your monthly budget to get started.</p>
@@ -972,32 +1011,67 @@
   let deferredInstallPrompt = null;
   const installBtn = document.getElementById('installBtn');
   const isStandalone = (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  const INSTALL_DISMISSED_KEY = 'nerovault_install_dismissed';
+  // Show the CTA to *new* visitors. Once a user dismisses it or installs the app we
+  // stop showing it so it doesn't nag returning users.
+  const installDismissed = localStorage.getItem(INSTALL_DISMISSED_KEY) === 'true';
+  function showInstallCta(label, title){
+    if(!installBtn || isStandalone || installDismissed) return;
+    installBtn.textContent = '';
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('width', '14'); icon.setAttribute('height', '14'); icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('fill', 'none'); icon.setAttribute('stroke', 'currentColor'); icon.setAttribute('stroke-width', '2');
+    icon.innerHTML = '<path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>';
+    installBtn.appendChild(icon);
+    installBtn.appendChild(document.createTextNode(' ' + label));
+    installBtn.title = title;
+    installBtn.classList.remove('hidden');
+    installBtn.classList.add('flex');
+  }
+  function hideInstallCta(){
+    if(installBtn){ installBtn.classList.add('hidden'); installBtn.classList.remove('flex'); }
+  }
+  function dismissInstallCta(){
+    localStorage.setItem(INSTALL_DISMISSED_KEY, 'true');
+    hideInstallCta();
+  }
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredInstallPrompt = e;
-    if(!isStandalone && installBtn){
-      installBtn.classList.remove('hidden');
-      installBtn.classList.add('flex');
-    }
+    showInstallCta('Install app', 'Install Nerovault as an app');
   });
   if(installBtn){
     installBtn.addEventListener('click', async () => {
-      if(!deferredInstallPrompt) return;
-      deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice;
-      deferredInstallPrompt = null;
-      installBtn.classList.add('hidden');
-      installBtn.classList.remove('flex');
+      if(deferredInstallPrompt){
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+      }
+      // iOS Safari (no install event) — point the user to the OS share sheet instead.
+      if(isIOS()){
+        showToast('Tap Share, then “Add to Home Screen” to install Nerovault.', 'default');
+      }
+      dismissInstallCta();
     });
   }
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
-    if(installBtn){ installBtn.classList.add('hidden'); installBtn.classList.remove('flex'); }
+    dismissInstallCta();
   });
+  // iOS / unsupported browsers: surface a one-time CTA for brand-new visitors so the
+  // install option is visible even without a native prompt API.
+  function isIOS(){
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+  if(!('onbeforeinstallprompt' in window) && isIOS()){
+    showInstallCta('Add to Home', 'Add Nerovault to your Home Screen');
+  }
 
   const STORAGE_KEY = 'nerovault_data';
   const THEME_KEY = 'nerovault_theme';
   const ROLLOVER_KEY = 'nerovault_rollover';
+  const APP_VERSION = '1.0.2';
   const isoToday = () => new Date().toISOString().split('T')[0];
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
   const addDaysISO = (n) => { const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().split('T')[0]; };
@@ -1032,11 +1106,36 @@
   }
 
   const CATS = [
-    { id:'family',    name:'Family & Household',  percent:30, color:'#38A3A5' },
-    { id:'essential', name:'Essential Survival',   percent:30, color:'#D6553F' },
-    { id:'lifestyle', name:'Personal & Lifestyle', percent:20, color:'#C9871F' },
-    { id:'savings',   name:'Future & Savings',     percent:20, color:'#8073D6' },
+    { id:'family',    name:'Family & Household',  percent:30, color:'#38A3A5', mode:'percent' },
+    { id:'essential', name:'Essential Survival',   percent:30, color:'#D6553F', mode:'percent' },
+    { id:'lifestyle', name:'Personal & Lifestyle', percent:20, color:'#C9871F', mode:'percent' },
+    { id:'savings',   name:'Future & Savings',     percent:20, color:'#8073D6', mode:'percent' },
   ];
+
+  // Curated swatches that mirror the app's own theme tokens (the exact CSS variables
+  // defined in :root — sage, teal, lavender, amber, coral, terracotta, etc), so any
+  // color a user picks visibly "compliments" the rest of Nerovault. Kept to the app's
+  // palette on purpose: a custom category color should never clash with the UI.
+  const CATEGORY_PALETTE = [
+    '#2F8F6F', // --sage
+    '#349F8A', // --teal
+    '#38A3A5',
+    '#8073D6', // --lavender
+    '#6C63FF', // --indigo
+    '#C9871F', // --amber
+    '#D6553F', // --danger / terracotta
+    '#E86252', // --coral
+    '#C4638A', // rose
+    '#5B7DB1', // muted blue
+    '#9C6B4A', // brown
+    '#5B6472', // slate
+  ];
+
+  function round1(n){ return Math.round(n * 10) / 10; }
+  function formatPercent(n){
+    const r = round1(Number(n) || 0);
+    return (Number.isInteger(r) ? r : r.toFixed(1)) + '%';
+  }
 
   function defaultData(){
     return {
@@ -1051,27 +1150,150 @@
     };
   }
 
-  function normalizeCategories(d){
+  // Categories can be either % of budget (mode:'percent', rescaled to always sum to
+  // 100% among themselves) or a fixed peso amount (mode:'fixed', untouched by budget
+  // changes or presets). normalizeCategories only rescales the percent-mode group.
+  //
+  // opts.lockedId: if given, that category's percent is kept EXACTLY as-is (not
+  // rescaled), and only the *other* percent-mode categories are adjusted to fill the
+  // remaining share. This is what makes manually typing "35%" for one category stick,
+  // instead of silently being rescaled back down together with everything else.
+  function normalizeCategories(d, opts){
     if(!Array.isArray(d.categories) || d.categories.length === 0) return d;
-    const total = d.categories.reduce((s,c) => s + Number(c.percent || 0), 0);
-    if(total <= 0){
-      const even = Math.round(100 / d.categories.length);
-      d.categories.forEach(c => c.percent = even);
+    opts = opts || {};
+    const percentCats = d.categories.filter(c => c.mode !== 'fixed');
+    if(percentCats.length === 0) return d;
+
+    const locked = opts.lockedId ? percentCats.find(c => c.id === opts.lockedId) : null;
+    if(locked){
+      const lockedPercent = Math.min(100, Math.max(0, round1(Number(locked.percent) || 0)));
+      const others = percentCats.filter(c => c.id !== locked.id);
+      locked.percent = lockedPercent;
+      if(others.length === 0) return d;
+      const remaining = Math.max(0, 100 - lockedPercent);
+      const othersTotal = others.reduce((s,c) => s + Number(c.percent || 0), 0);
+      if(othersTotal <= 0){
+        const even = round1(remaining / others.length);
+        others.forEach(c => c.percent = even);
+      } else {
+        others.forEach(c => { c.percent = round1((Number(c.percent || 0) / othersTotal) * remaining); });
+      }
       return d;
     }
-    d.categories.forEach(c => {
-      const calculated = (Number(c.percent || 0) / total) * 100;
-      c.percent = Math.round(calculated);
+
+    const total = percentCats.reduce((s,c) => s + Number(c.percent || 0), 0);
+    if(total <= 0){
+      const even = round1(100 / percentCats.length);
+      percentCats.forEach(c => c.percent = even);
+      return d;
+    }
+    percentCats.forEach(c => {
+      c.percent = round1((Number(c.percent || 0) / total) * 100);
     });
     return d;
   }
+
+  // Fixed-amount categories take their peso amount off the top of the budget first;
+  // percent-mode categories then split whatever budget remains, according to their
+  // (always-sum-to-100-among-themselves) percentages.
+  function fixedCategoryTotal(d){
+    return d.categories.filter(c => c.mode === 'fixed').reduce((s,c) => s + (Number(c.amount) || 0), 0);
+  }
+  function remainingBudgetForPercent(d){
+    return Math.max(0, Number(d.budget || 0) - fixedCategoryTotal(d));
+  }
+  function categoryBaseAllocated(d, cat){
+    if(cat.mode === 'fixed') return Number(cat.amount) || 0;
+    return (remainingBudgetForPercent(d) * Number(cat.percent || 0)) / 100;
+  }
+
+  // ---- compact color swatch picker ----
+  // Replaces the native <input type=color> (which renders as a big, stretched bar,
+  // especially on mobile) with a small circular trigger that opens a popover of
+  // curated swatches matching the app's own palette, plus a native color input tucked
+  // inside for anyone who wants a fully custom hex. The actual selected value is kept
+  // in a hidden <input> with the SAME id the rest of the app already reads
+  // (e.g. newCatColor, editCatColor-<id>), so save logic elsewhere needs no changes.
+  function colorSwatchGridHtml(targetId, selected){
+    const sel = (selected || '').toLowerCase();
+    const dots = CATEGORY_PALETTE.map(hex => `
+      <button type="button" class="color-swatch-dot" data-action="pickcolor" data-target="${targetId}" data-color="${hex}" data-selected="${hex.toLowerCase() === sel}" style="background:${hex}" aria-label="Use color ${hex}" title="${hex}"></button>
+    `).join('');
+    return `
+      <div class="color-swatch-panel hidden" id="${targetId}-panel" role="dialog" aria-label="Choose category color">
+        ${dots}
+        <div class="color-swatch-custom-row">
+          <input type="color" class="color-swatch-custom-input" id="${targetId}-custom" value="${selected || '#2F8F6F'}" data-target="${targetId}" title="Pick any custom color">
+          <span class="text-[10px] text-gray-400">Custom</span>
+        </div>
+      </div>
+    `;
+  }
+  function colorSwatchTriggerHtml(targetId, selected){
+    const color = selected || '#2F8F6F';
+    return `
+      <div class="relative flex-shrink-0">
+        <input type="hidden" id="${targetId}" value="${color}">
+        <button type="button" class="color-swatch-trigger" data-action="togglecolorpanel" data-target="${targetId}" style="background:${color}" aria-label="Choose category color" title="Choose category color"></button>
+        ${colorSwatchGridHtml(targetId, color)}
+      </div>
+    `;
+  }
+  function setSwatchColor(targetId, hex){
+    const hidden = document.getElementById(targetId);
+    if(hidden) hidden.value = hex;
+    const trigger = document.querySelector('button[data-action="togglecolorpanel"][data-target="' + targetId + '"]');
+    if(trigger) trigger.style.background = hex;
+    const panel = document.getElementById(targetId + '-panel');
+    if(panel){
+      panel.querySelectorAll('.color-swatch-dot').forEach(dot => {
+        dot.dataset.selected = (dot.dataset.color.toLowerCase() === hex.toLowerCase()) ? 'true' : 'false';
+      });
+      const custom = panel.querySelector('.color-swatch-custom-input');
+      if(custom) custom.value = hex;
+    }
+  }
+  function closeAllColorPanels(){
+    document.querySelectorAll('.color-swatch-panel').forEach(p => p.classList.add('hidden'));
+  }
+  // Delegated at the document level (not tied to any single re-rendered list) so it
+  // keeps working for both the static "add category" row and the dynamically
+  // re-rendered per-category edit rows without rebinding listeners on every render.
+  document.addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('button[data-action="togglecolorpanel"]');
+    if(toggleBtn){
+      const targetId = toggleBtn.dataset.target;
+      const panel = document.getElementById(targetId + '-panel');
+      const wasOpen = panel && !panel.classList.contains('hidden');
+      closeAllColorPanels();
+      if(panel && !wasOpen) panel.classList.remove('hidden');
+      return;
+    }
+    const dot = e.target.closest('button[data-action="pickcolor"]');
+    if(dot){
+      setSwatchColor(dot.dataset.target, dot.dataset.color);
+      closeAllColorPanels();
+      return;
+    }
+    if(!e.target.closest('.color-swatch-panel')){
+      closeAllColorPanels();
+    }
+  });
+  document.addEventListener('input', (e) => {
+    if(e.target.classList && e.target.classList.contains('color-swatch-custom-input')){
+      setSwatchColor(e.target.dataset.target, e.target.value);
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') closeAllColorPanels();
+  });
 
   // ---- versioned data migrations ----
   // Each entry upgrades a save file from its index (schemaVersion) to index+1.
   // To change the data shape later: add a new function to the end of this array,
   // bump SCHEMA_VERSION to match, and never edit or reorder existing entries —
   // old backups must still replay correctly through every step.
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
   const MIGRATIONS = [
     // v0 -> v1: original ad-hoc shape -> fill in every field with a safe default,
     // rename/repair legacy bill and goal fields, normalize category percentages.
@@ -1094,6 +1316,16 @@
       p.goals.forEach(g => {
         if(!g.createdAt) g.createdAt = addDaysISO(-30);
       });
+      return p;
+    },
+    // v1 -> v2: categories gain a mode field ('percent' or 'fixed') so a category can
+    // hold an exact peso amount instead of only a % share. Every pre-existing category
+    // defaults to 'percent' so nothing about anyone's current budget split changes.
+    function migrateTo2(p){
+      p.categories.forEach(c => {
+        if(c.mode !== 'fixed') c.mode = 'percent';
+      });
+      normalizeCategories(p);
       return p;
     },
   ];
@@ -1338,7 +1570,7 @@
   function isRolloverEnabled(){ return localStorage.getItem(ROLLOVER_KEY) === 'true'; }
   function categoryRolloverAmount(d, cat){
     if(!isRolloverEnabled()) return 0;
-    const lastAllocated = (d.budget * cat.percent) / 100;
+    const lastAllocated = categoryBaseAllocated(d, cat);
     const lastSpent = categorySpentInMonth(d, cat.id, -1);
     return Math.max(0, lastAllocated - lastSpent);
   }
@@ -1460,6 +1692,29 @@
 
   // ---- category inline editing ----
   let editingCategoryId = null;
+
+  // Live hints so the two allocation modes feel connected and the user always sees the
+  // real money behind a % (and the % behind a fixed ₱ amount). Directly addresses the
+  // feedback "this thing is not a percentage / I can't input the exact peso there" — now
+  // either input shows its peso/percent equivalent as you type.
+  function updateCatHints(d, id, isFixed){
+    const pctInput = document.getElementById('editCatPercent-' + id);
+    const amtInput = document.getElementById('editCatAmount-' + id);
+    const pctHint = document.getElementById('editCatPercentPeso-' + id);
+    const amtHint = document.getElementById('editCatAmountPct-' + id);
+    const remainingPool = remainingBudgetForPercent(d);
+
+    if(pctInput && pctHint){
+      const pct = parseFloat(pctInput.value) || 0;
+      pctHint.textContent = pct > 0 ? `≈ ${peso((remainingPool * pct) / 100)} of your budget` : '';
+    }
+    if(amtInput && amtHint){
+      const amt = parseFloat(amtInput.value) || 0;
+      const pctOfBudget = d.budget > 0 ? (amt / d.budget) * 100 : 0;
+      amtHint.textContent = amt > 0 ? `≈ ${formatPercent(pctOfBudget)} of your ₱${Number(d.budget).toLocaleString()} budget` : '';
+    }
+  }
+
   function renderCategories(d){
     const wrap = document.getElementById('categoryList');
     wrap.innerHTML = '';
@@ -1473,15 +1728,31 @@
       card.className = 'card p-4 fade-in';
 
       if(editingCategoryId === cat.id){
+        const isFixed = cat.mode === 'fixed';
+        const seedAmount = cat.amount || Math.round(categoryBaseAllocated(d, cat));
         card.innerHTML = `
           <div class="space-y-2.5">
             <input type="text" id="editCatName-${cat.id}" value="${escapeHtml(cat.name)}" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--sage)]" placeholder="Category name">
             <div class="flex items-center gap-2">
-              <input type="color" id="editCatColor-${cat.id}" value="${cat.color}" class="h-9 w-12 flex-shrink-0 bg-transparent border border-gray-200 rounded-lg p-1">
-              <div class="flex items-center gap-1.5 flex-1">
-                <input type="number" id="editCatPercent-${cat.id}" min="1" max="100" value="${cat.percent}" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--sage)]">
+              ${colorSwatchTriggerHtml('editCatColor-' + cat.id, cat.color)}
+              <div class="flex items-center gap-1 flex-1 rounded-lg border border-gray-200 p-0.5 text-[11px] font-semibold">
+                <button type="button" data-action="setcatmode" data-id="${cat.id}" data-mode="percent" class="cat-mode-btn flex-1 py-2 rounded-md" data-active="${!isFixed}">% of budget</button>
+                <button type="button" data-action="setcatmode" data-id="${cat.id}" data-mode="fixed" class="cat-mode-btn flex-1 py-2 rounded-md" data-active="${isFixed}">Fixed ₱</button>
+              </div>
+            </div>
+            <div id="editCatPercentWrap-${cat.id}" class="${isFixed ? 'hidden' : ''}">
+              <div class="flex items-center gap-1.5">
+                <input type="number" id="editCatPercent-${cat.id}" min="0.1" max="100" step="0.1" value="${cat.percent}" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--sage)]">
                 <span class="text-xs text-gray-400 flex-shrink-0">%</span>
               </div>
+              <p class="text-[10px] text-gray-400 mt-1">Set the exact % — other % categories adjust automatically to still add up to 100%. <span class="inline-block mt-0.5 font-medium text-gray-500" id="editCatPercentPeso-${cat.id}"></span></p>
+            </div>
+            <div id="editCatAmountWrap-${cat.id}" class="${isFixed ? '' : 'hidden'}">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs text-gray-400 flex-shrink-0">₱</span>
+                <input type="number" id="editCatAmount-${cat.id}" min="1" step="1" value="${seedAmount}" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--sage)]">
+              </div>
+              <p class="text-[10px] text-gray-400 mt-1">An exact peso amount (e.g. ${peso(2000)}) — no percentages needed. <span class="inline-block mt-0.5 font-medium text-gray-500" id="editCatAmountPct-${cat.id}"></span></p>
             </div>
             <div class="flex items-center gap-2 pt-1">
               <button data-action="cancelcatedit" class="flex-1 text-xs font-semibold py-2 rounded-lg border border-gray-200 text-gray-600">Cancel</button>
@@ -1490,10 +1761,11 @@
           </div>
         `;
         wrap.appendChild(card);
+        updateCatHints(d, cat.id, isFixed);
         return;
       }
 
-      const baseAllocated = (d.budget * cat.percent) / 100;
+      const baseAllocated = categoryBaseAllocated(d, cat);
       const rollover = categoryRolloverAmount(d, cat);
       const allocated = baseAllocated + rollover;
       const spent = categorySpent(d, cat.id);
@@ -1509,7 +1781,7 @@
             <span class="text-sm font-semibold text-[var(--ink)] truncate">${escapeHtml(cat.name)}</span>
           </div>
           <div class="flex items-center gap-1.5 flex-shrink-0">
-            <span class="text-[11px] text-gray-400 mr-0.5">${cat.percent}%</span>
+            <span class="text-[11px] text-gray-400 mr-0.5">${cat.mode === 'fixed' ? peso(cat.amount || 0) + ' fixed' : formatPercent(cat.percent)}</span>
             <button data-action="editcat" data-id="${cat.id}" class="text-gray-300 hover:text-[var(--sage)] transition-colors p-0.5" title="Edit category" aria-label="Edit ${escapeHtml(cat.name)} category">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
             </button>
@@ -1905,9 +2177,15 @@
       const cats = data.categories;
       if(!cats || cats.length === 0) return;
 
-      // Presets are defined against the four default categories by id, so they still
-      // land on the right category even if the user has reordered, renamed, or added
-      // custom categories. Any category without a defined value in the preset gets 0%.
+      // Presets are defined against the four default categories by id. They are applied
+      // to the *current* category list two ways:
+      //   1. If the named default categories still exist, the preset's exact split lands
+      //      on them (e.g. 50 -> Family, 30 -> Essential, 20 -> Lifestyle).
+      //   2. Any extra percentage-mode category (renamed or custom-added) receives a fair
+      //      share of whatever budget is left, so the preset works no matter how the user
+      //      has customized their categories — it never silently fails or gets "stuck".
+      // Fixed-₱ categories are never touched — presets only redistribute the % of budget
+      // pool after any fixed amounts are already set aside.
       const presetMap = {
         '50-30-20': { family:50, essential:30, lifestyle:20, savings:0 },
         '70-20-10': { family:70, essential:20, lifestyle:10, savings:0 },
@@ -1917,12 +2195,24 @@
       const values = presetMap[preset];
       if(!values) return;
 
-      const hasDefaultCats = cats.some(c => Object.prototype.hasOwnProperty.call(values, c.id));
-      if(!hasDefaultCats){
-        showToast('This preset needs the default categories — none were found.', 'danger');
-        return;
+      const percentCats = cats.filter(c => c.mode !== 'fixed');
+      // Categories that the preset names (if they still exist in the user's list).
+      const namedCats = percentCats.filter(c => Object.prototype.hasOwnProperty.call(values, c.id));
+      // Everything else in the % pool that the preset doesn't name (renamed/custom cats).
+      const extraCats = percentCats.filter(c => !Object.prototype.hasOwnProperty.call(values, c.id));
+
+      // Total of the explicit preset values that actually map to existing categories.
+      const namedTotal = namedCats.reduce((s, c) => s + (values[c.id] || 0), 0);
+      // Whatever the preset doesn't explicitly claim goes to the extra categories.
+      const extraTotal = Math.max(0, 100 - namedTotal);
+
+      namedCats.forEach(c => { c.percent = values[c.id] || 0; });
+      if(extraCats.length > 0){
+        // Split the leftover share evenly across extra categories so they all get a
+        // non-zero, sensible slice instead of being dumped at 0%.
+        const share = round1(extraTotal / extraCats.length);
+        extraCats.forEach(c => { c.percent = share; });
       }
-      cats.forEach(c => { c.percent = Object.prototype.hasOwnProperty.call(values, c.id) ? values[c.id] : 0; });
 
       normalizeCategories(data);
       saveData(data);
@@ -1941,6 +2231,9 @@
     if(d.goals.length) parts.push(d.goals.length + ' goal' + (d.goals.length > 1 ? 's' : ''));
     if(d.savings.length) parts.push(d.savings.length + ' saving' + (d.savings.length > 1 ? 's' : ''));
     el.textContent = parts.length ? parts.join(' · ') + ' logged' : '';
+
+    const verEl = document.getElementById('appVersion');
+    if(verEl) verEl.textContent = APP_VERSION;
   }
 
   // ---- capacity input ----
@@ -2129,20 +2422,52 @@
       renderCategories(data);
       return;
     }
+    if(action === 'setcatmode'){
+      // Pure UI toggle — swaps which input is visible without re-rendering the card,
+      // so anything already typed into the name/color/percent/amount fields survives.
+      const mode = btn.dataset.mode;
+      const percentWrap = document.getElementById('editCatPercentWrap-' + id);
+      const amountWrap = document.getElementById('editCatAmountWrap-' + id);
+      if(percentWrap) percentWrap.classList.toggle('hidden', mode !== 'percent');
+      if(amountWrap) amountWrap.classList.toggle('hidden', mode !== 'fixed');
+      document.querySelectorAll('.cat-mode-btn[data-id="' + id + '"]').forEach(b => {
+        b.dataset.active = (b.dataset.mode === mode) ? 'true' : 'false';
+      });
+      return;
+    }
     if(action === 'savecatedit'){
       const cat = data.categories.find(c => c.id === id);
       if(!cat) return;
       const nameInput = document.getElementById('editCatName-' + id);
       const colorInput = document.getElementById('editCatColor-' + id);
-      const percentInput = document.getElementById('editCatPercent-' + id);
       const name = nameInput.value.trim();
       const color = colorInput.value || cat.color;
-      let percent = parseFloat(percentInput.value);
       if(!name){ showToast('Enter a category name.', 'danger'); return; }
-      if(!percent || percent <= 0){ showToast('Enter a percentage greater than 0.', 'danger'); return; }
-      percent = Math.min(100, percent);
-      cat.name = name; cat.color = color; cat.percent = percent;
-      normalizeCategories(data);
+
+      const activeModeBtn = document.querySelector('.cat-mode-btn[data-id="' + id + '"][data-active="true"]');
+      const mode = activeModeBtn ? activeModeBtn.dataset.mode : (cat.mode || 'percent');
+
+      if(mode === 'fixed'){
+        const amountInput = document.getElementById('editCatAmount-' + id);
+        let amount = parseFloat(amountInput.value);
+        if(!amount || amount <= 0){ showToast('Enter a peso amount greater than 0.', 'danger'); return; }
+        cat.name = name; cat.color = color; cat.mode = 'fixed'; cat.amount = amount;
+        // Keep a reference percent in sync too (purely informational — allocation for
+        // fixed categories always uses cat.amount directly, never this percent).
+        cat.percent = data.budget > 0 ? round1(Math.min(100, (amount / data.budget) * 100)) : cat.percent;
+        normalizeCategories(data);
+      } else {
+        const percentInput = document.getElementById('editCatPercent-' + id);
+        let percent = parseFloat(percentInput.value);
+        if(!percent || percent <= 0){ showToast('Enter a percentage greater than 0.', 'danger'); return; }
+        percent = Math.min(100, percent);
+        cat.name = name; cat.color = color; cat.mode = 'percent'; cat.percent = round1(percent);
+        // Lock THIS category's percent exactly as typed — only the other % categories
+        // shift to fill the remaining share, instead of everyone (including this one)
+        // getting silently rescaled back down.
+        normalizeCategories(data, { lockedId: id });
+      }
+
       editingCategoryId = null;
       saveData(data);
       renderAll();
@@ -2224,7 +2549,8 @@
 
         const usedExpenses = data.expenses.filter(x => x.category === id).length;
         const usedBills = data.bills.filter(x => x.category === id).length;
-        let message = `"${cat.name}" (${cat.percent}% of your budget) will be permanently deleted.`;
+        const catShare = cat.mode === 'fixed' ? `${peso(cat.amount || 0)} fixed` : formatPercent(cat.percent);
+        let message = `"${cat.name}" (${catShare} of your budget) will be permanently deleted.`;
         if(usedExpenses || usedBills){
           const parts = [];
           if(usedExpenses) parts.push(`${usedExpenses} expense${usedExpenses>1?'s':''}`);
@@ -2247,6 +2573,14 @@
   document.getElementById('tab-savings-list').addEventListener('click', handleDelegatedClick);
   document.getElementById('tab-feed-list').addEventListener('click', handleDelegatedClick);
   document.getElementById('categoryList').addEventListener('click', handleDelegatedClick);
+  // Live-update the ₱⇄% hints in the category edit form as the user types.
+  document.getElementById('categoryList').addEventListener('input', (e) => {
+    if(!editingCategoryId) return;
+    const id = editingCategoryId;
+    if(e.target.id === 'editCatPercent-' + id || e.target.id === 'editCatAmount-' + id){
+      updateCatHints(data, id, e.target.id.startsWith('editCatAmount-'));
+    }
+  });
 
   // ---- add modal ----
   const modal = document.getElementById('addModal');
@@ -2279,21 +2613,28 @@
   // ---- custom category UI ----
   const addCatBtn = document.getElementById('addCatBtn');
   const newCatName = document.getElementById('newCatName');
-  const newCatColor = document.getElementById('newCatColor');
+  const newCatColorWrap = document.getElementById('newCatColorWrap');
+  if(newCatColorWrap) newCatColorWrap.innerHTML = colorSwatchTriggerHtml('newCatColor', '#2F8F6F');
 
   function addCustomCategory(){
     const name = (newCatName && newCatName.value ? newCatName.value : '').trim();
+    const newCatColor = document.getElementById('newCatColor');
     const color = (newCatColor && newCatColor.value) ? newCatColor.value : '#2F8F6F';
     if(!name) return;
 
+    const newId = uid();
     data.categories.push({
-      id: uid(),
+      id: newId,
       name,
       percent: 10,
+      mode: 'percent',
       color,
     });
 
-    normalizeCategories(data);
+    // Lock the new category at its starting 10% — existing categories share the
+    // remaining 90% proportionally, instead of everyone (including the brand-new one)
+    // getting rescaled to some other number.
+    normalizeCategories(data, { lockedId: newId });
     saveData(data);
     renderAll();
     newCatName.value = '';
