@@ -445,11 +445,7 @@
         </div>
 
         <!-- Budget Presets -->
-        <div class="flex items-center gap-1.5 mb-3 flex-wrap">
-          <button data-preset="50-30-20" class="chip text-[10px] font-semibold px-2.5 py-1.5 rounded-full border">50/30/20</button>
-          <button data-preset="70-20-10" class="chip text-[10px] font-semibold px-2.5 py-1.5 rounded-full border">70/20/10</button>
-          <button data-preset="60-30-10" class="chip text-[10px] font-semibold px-2.5 py-1.5 rounded-full border">60/30/10</button>
-          <button data-preset="80-10-10" class="chip text-[10px] font-semibold px-2.5 py-1.5 rounded-full border">80/10/10</button>
+        <div class="flex items-center gap-1.5 mb-3 flex-wrap" id="presetChips">
           <span class="text-[10px] text-gray-400">Presets</span>
         </div>
 
@@ -1071,6 +1067,7 @@
   const STORAGE_KEY = 'nerovault_data';
   const THEME_KEY = 'nerovault_theme';
   const ROLLOVER_KEY = 'nerovault_rollover';
+  const PRESETS_KEY = 'nerovault_presets';
   const APP_VERSION = '1.0.2';
   const isoToday = () => new Date().toISOString().split('T')[0];
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
@@ -1130,6 +1127,41 @@
     '#9C6B4A', // brown
     '#5B6472', // slate
   ];
+
+  // ---- budget presets ----
+  // A preset splits the budget across the four default category IDs. Users can add their
+  // own presets (saved in localStorage) on top of this curated built-in set. Each built-in
+  // `preset` is normalized to 100 before use; custom saves may exceed/under 100 and are
+  // rescaled by normalizeCategories anyway, so the editor just needs them roughly sensible.
+  const BUILTIN_PRESETS = [
+    { id:'50-30-20', name:'50/30/20', family:50, essential:30, lifestyle:20, savings:0, builtin:true },
+    { id:'70-20-10', name:'70/20/10', family:70, essential:20, lifestyle:10, savings:0, builtin:true },
+    { id:'60-30-10', name:'60/30/10', family:60, essential:30, lifestyle:10, savings:0, builtin:true },
+    { id:'80-10-10', name:'80/10/10', family:80, essential:10, lifestyle:10, savings:0, builtin:true },
+    { id:'40-30-20-10', name:'40/30/20/10', family:40, essential:30, lifestyle:20, savings:10, builtin:true },
+    { id:'50-20-20-10', name:'50/20/20/10', family:50, essential:20, lifestyle:20, savings:10, builtin:true },
+    { id:'60-10-10-20', name:'60/10/10/20', family:60, essential:10, lifestyle:10, savings:20, builtin:true },
+    { id:'80-10-0-10', name:'80/10/0/10', family:80, essential:10, lifestyle:0, savings:10, builtin:true },
+  ];
+
+  // localStorage holds only the USER's custom presets; built-ins are always re-seeded from
+  // BUILTIN_PRESETS so we can ship new built-ins later without wiping user additions.
+  function loadCustomPresets(){
+    try{
+      const raw = localStorage.getItem(PRESETS_KEY);
+      if(!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.filter(p => p && p.id && !p.builtin) : [];
+    }catch(e){ return []; }
+  }
+  function saveCustomPresets(list){
+    try{ localStorage.setItem(PRESETS_KEY, JSON.stringify(list)); }catch(e){}
+  }
+  let customPresets = loadCustomPresets();
+  function allPresets(){ return BUILTIN_PRESETS.concat(customPresets); }
+  function presetValues(p){
+    return { family: Number(p.family) || 0, essential: Number(p.essential) || 0, lifestyle: Number(p.lifestyle) || 0, savings: Number(p.savings) || 0 };
+  }
 
   function round1(n){ return Math.round(n * 10) / 10; }
   function formatPercent(n){
