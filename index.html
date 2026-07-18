@@ -92,6 +92,20 @@
   .btn-primary:hover{ background:#287A5F; transform:translateY(-1px); box-shadow:0 6px 16px -4px rgba(47,143,111,0.55); }
   .btn-primary:active{ transform:translateY(0) scale(0.98); }
 
+  /* Emphasized install CTA — stands out from the quieter header icons so visitors on a
+     browser notice they can install Nerovault as an app. Gentle attention pulse. */
+  .install-cta{
+    border:1.5px solid rgba(255,255,255,0.35);
+    box-shadow:0 4px 14px -3px rgba(47,143,111,0.55);
+    animation:installPulse 2.4s ease-in-out infinite;
+  }
+  .install-cta:hover{ animation:none; transform:translateY(-1px); box-shadow:0 6px 18px -4px rgba(47,143,111,0.65); }
+  @keyframes installPulse{
+    0%, 100%{ box-shadow:0 4px 14px -3px rgba(47,143,111,0.45); }
+    50%{ box-shadow:0 4px 20px 1px rgba(47,143,111,0.75); }
+  }
+  html.dark .install-cta{ box-shadow:0 4px 14px -3px rgba(40,122,95,0.6); }
+
   .btn-outline{
     background:transparent;
     border:1.5px solid var(--border);
@@ -348,7 +362,7 @@
           <option value="JPY">¥ JPY</option>
           <option value="INR">₹ INR</option>
         </select>
-        <button id="installBtn" class="hidden items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-white" style="background:var(--sage);" title="Install Nerovault as an app">
+        <button id="installBtn" class="hidden items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-white install-cta" style="background:var(--sage);" title="Install Nerovault as an app">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
           Install app
         </button>
@@ -778,6 +792,12 @@
         </ol>
       </div>
 
+      <div class="manual-section" id="help-presets">
+        <h3>Budget presets</h3>
+        <p>The <strong>Presets</strong> chips above your categories instantly split your budget across the four groups — Family &amp; Household, Essential Survival, Personal &amp; Lifestyle, and Future &amp; Savings. Tap any chip to apply it; it redistributes your current categories automatically (fixed-₱ categories are left alone).</p>
+        <p class="mt-1.5">Eight starter presets are included (50/30/20, 70/20/10, 60/30/10, 80/10/10, and more). Tap <strong>+ New</strong> to save your own split — edit or delete your custom presets anytime with the small icons on each chip.</p>
+      </div>
+
       <div class="manual-section" id="help-income">
         <h3>Income</h3>
         <p>Log any money you receive — salary, allowance, freelance pay, gifts. Turn on <strong>Repeat monthly</strong> when adding it and Nerovault will add it again automatically at the start of each new month, so you don't have to re-enter it.</p>
@@ -861,7 +881,7 @@
 
       <div class="manual-section">
         <h3>Recently added</h3>
-        <p class="text-gray-400">Net Worth & Savings Rate stats, Budget Rollover, Bill sorting, expense notes, budget presets (50/30/20 etc) that now apply to your custom categories, per-category theme colors, fixed-₱ amounts (set an exact peso instead of a %), and a 6-month spending sparkline.</p>
+        <p class="text-gray-400">Net Worth & Savings Rate stats, Budget Rollover, Bill sorting, expense notes, a customizable budget-preset picker (8 built-ins like 50/30/20, 40/30/20/10, 60/10/10/20, plus your own saved presets) that applies to your custom categories, per-category theme colors, fixed-₱ amounts (set an exact peso instead of a %), and a 6-month spending sparkline.</p>
       </div>
 
       <p class="text-[10px] text-gray-400 pt-2 border-t border-gray-100">Need more help? Open an issue on GitHub or reach out to the developer.</p>
@@ -987,6 +1007,48 @@
   </div>
 </div>
 
+<!-- PRESET MODAL -->
+<div id="presetModal" class="fixed inset-0 z-[65] hidden items-center justify-center modal-backdrop px-4" role="dialog" aria-modal="true" aria-labelledby="presetModalTitle">
+  <div class="card w-full max-w-sm p-6 scale-in">
+    <div class="flex items-center justify-between mb-4">
+      <h3 id="presetModalTitle" class="text-base font-semibold text-[var(--ink)]">New preset</h3>
+      <button id="closePresetBtn" class="text-gray-400 hover:text-gray-700 transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <p class="text-xs text-gray-500 mb-4">Splits your budget across the four category groups. Values are rescaled to 100% when applied, so rough numbers are fine.</p>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1.5">Preset name</label>
+        <input id="presetName" type="text" placeholder="e.g. My 60/20/20" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">Family &amp; Household %</label>
+          <input id="presetFamily" type="number" min="0" max="100" step="1" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">Essential Survival %</label>
+          <input id="presetEssential" type="number" min="0" max="100" step="1" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">Personal &amp; Lifestyle %</label>
+          <input id="presetLifestyle" type="number" min="0" max="100" step="1" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">Future &amp; Savings %</label>
+          <input id="presetSavings" type="number" min="0" max="100" step="1" class="w-full bg-[#FAFAF8] border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--sage)]">
+        </div>
+      </div>
+      <div class="flex items-center justify-between text-[11px] text-gray-500">
+        <span>Total</span>
+        <span id="presetTotal" class="font-semibold mono">100%</span>
+      </div>
+    </div>
+    <button id="presetSaveBtn" class="btn-primary w-full text-white text-sm font-semibold py-3 rounded-xl mt-5 transition-colors">Save preset</button>
+  </div>
+</div>
+
 <!-- TOASTS -->
 <div id="toastContainer" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-[80] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
 
@@ -1035,6 +1097,8 @@
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredInstallPrompt = e;
+    sawNativePrompt = true;
+    localStorage.setItem(INSTALL_SEEN_PROMPT_KEY, 'true');
     showInstallCta('Install app', 'Install Nerovault as an app');
   });
   if(installBtn){
@@ -1062,6 +1126,15 @@
   }
   if(!('onbeforeinstallprompt' in window) && isIOS()){
     showInstallCta('Add to Home', 'Add Nerovault to your Home Screen');
+  }
+  // Generic, always-visible CTA for brand-new browser visitors: if the OS hasn't already
+  // surfaced a native install prompt and the user isn't running the installed app, show
+  // the emphasized "Install app" button so people using Nerovault in a browser notice
+  // they can install it. When beforeinstallprompt later fires, it simply re-labels it.
+  const INSTALL_SEEN_PROMPT_KEY = 'nerovault_install_prompt_seen';
+  let sawNativePrompt = localStorage.getItem(INSTALL_SEEN_PROMPT_KEY) === 'true';
+  if(!isStandalone && !installDismissed && !sawNativePrompt && !isIOS()){
+    showInstallCta('Install app', 'Install Nerovault as an app for easy access');
   }
 
   const STORAGE_KEY = 'nerovault_data';
@@ -2202,56 +2275,81 @@
     });
   });
 
-  // Budget presets
-  document.querySelectorAll('[data-preset]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const preset = btn.dataset.preset;
-      const cats = data.categories;
-      if(!cats || cats.length === 0) return;
-
-      // Presets are defined against the four default categories by id. They are applied
-      // to the *current* category list two ways:
-      //   1. If the named default categories still exist, the preset's exact split lands
-      //      on them (e.g. 50 -> Family, 30 -> Essential, 20 -> Lifestyle).
-      //   2. Any extra percentage-mode category (renamed or custom-added) receives a fair
-      //      share of whatever budget is left, so the preset works no matter how the user
-      //      has customized their categories — it never silently fails or gets "stuck".
-      // Fixed-₱ categories are never touched — presets only redistribute the % of budget
-      // pool after any fixed amounts are already set aside.
-      const presetMap = {
-        '50-30-20': { family:50, essential:30, lifestyle:20, savings:0 },
-        '70-20-10': { family:70, essential:20, lifestyle:10, savings:0 },
-        '60-30-10': { family:60, essential:30, lifestyle:10, savings:0 },
-        '80-10-10': { family:80, essential:10, lifestyle:10, savings:0 },
-      };
-      const values = presetMap[preset];
-      if(!values) return;
-
-      const percentCats = cats.filter(c => c.mode !== 'fixed');
-      // Categories that the preset names (if they still exist in the user's list).
-      const namedCats = percentCats.filter(c => Object.prototype.hasOwnProperty.call(values, c.id));
-      // Everything else in the % pool that the preset doesn't name (renamed/custom cats).
-      const extraCats = percentCats.filter(c => !Object.prototype.hasOwnProperty.call(values, c.id));
-
-      // Total of the explicit preset values that actually map to existing categories.
-      const namedTotal = namedCats.reduce((s, c) => s + (values[c.id] || 0), 0);
-      // Whatever the preset doesn't explicitly claim goes to the extra categories.
-      const extraTotal = Math.max(0, 100 - namedTotal);
-
-      namedCats.forEach(c => { c.percent = values[c.id] || 0; });
-      if(extraCats.length > 0){
-        // Split the leftover share evenly across extra categories so they all get a
-        // non-zero, sensible slice instead of being dumped at 0%.
-        const share = round1(extraTotal / extraCats.length);
-        extraCats.forEach(c => { c.percent = share; });
-      }
-
-      normalizeCategories(data);
-      saveData(data);
-      renderAll();
-      showToast(`"${preset}" preset applied.`, 'success');
+  // ---- budget preset chips (dynamic) ----
+  // Renders the built-in presets plus the user's saved custom ones as chips, with a
+  // trailing "+ New preset" button. Built-ins can be applied; custom ones can also be
+  // edited or deleted. Clicking a chip applies that preset's split to the current
+  // categories (using the redistribution logic below so it works for customized lists).
+  const presetChipsWrap = document.getElementById('presetChips');
+  function renderPresets(){
+    if(!presetChipsWrap) return;
+    const presets = allPresets();
+    let html = '<span class="text-[10px] text-gray-400">Presets</span>';
+    presets.forEach(p => {
+      const editBtn = p.builtin ? '' :
+        `<button type="button" data-preset-edit="${p.id}" class="text-gray-300 hover:text-[var(--sage)] transition-colors ml-0.5" title="Edit preset" aria-label="Edit ${escapeHtml(p.name)} preset">
+           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+         </button>
+         <button type="button" data-preset-del="${p.id}" class="text-gray-300 hover:text-[var(--danger)] transition-colors" title="Delete preset" aria-label="Delete ${escapeHtml(p.name)} preset">
+           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+         </button>`;
+      html += `<span class="inline-flex items-center gap-0.5 chip text-[10px] font-semibold px-2.5 py-1.5 rounded-full border" data-active="false">
+        <button type="button" data-preset="${p.id}" class="font-semibold leading-none">${escapeHtml(p.name)}</button>${editBtn}
+      </span>`;
     });
-  });
+    html += `<button type="button" id="newPresetBtn" class="chip text-[10px] font-semibold px-2.5 py-1.5 rounded-full border" data-active="false" title="Create a custom preset">+ New</button>`;
+    presetChipsWrap.innerHTML = html;
+  }
+
+  // Apply a preset (by id) to the current categories. Named default categories receive
+  // the preset's exact split; any extra % category gets an even share of what's left.
+  // Fixed-₱ categories are untouched. This is what makes presets work even after the user
+  // has renamed, removed, or added categories.
+  function applyPreset(presetId){
+    const preset = allPresets().find(p => p.id === presetId);
+    if(!preset) return;
+    const cats = data.categories;
+    if(!cats || cats.length === 0) return;
+    const values = presetValues(preset);
+
+    const percentCats = cats.filter(c => c.mode !== 'fixed');
+    const namedCats = percentCats.filter(c => Object.prototype.hasOwnProperty.call(values, c.id));
+    const extraCats = percentCats.filter(c => !Object.prototype.hasOwnProperty.call(values, c.id));
+    const namedTotal = namedCats.reduce((s, c) => s + (values[c.id] || 0), 0);
+    const extraTotal = Math.max(0, 100 - namedTotal);
+
+    namedCats.forEach(c => { c.percent = values[c.id] || 0; });
+    if(extraCats.length > 0){
+      const share = round1(extraTotal / extraCats.length);
+      extraCats.forEach(c => { c.percent = share; });
+    }
+
+    normalizeCategories(data);
+    saveData(data);
+    renderAll();
+    showToast(`"${preset.name}" preset applied.`, 'success');
+  }
+
+  if(presetChipsWrap){
+    presetChipsWrap.addEventListener('click', (e) => {
+      const applyBtn = e.target.closest('[data-preset]');
+      if(applyBtn){ applyPreset(applyBtn.dataset.preset); return; }
+      const editBtn = e.target.closest('[data-preset-edit]');
+      if(editBtn){ openPresetModal(editBtn.dataset.presetEdit); return; }
+      const delBtn = e.target.closest('[data-preset-del]');
+      if(delBtn){
+        const p = customPresets.find(x => x.id === delBtn.dataset.presetDel);
+        if(p) openConfirmModal({ title:'Delete this preset?', message:`"${p.name}" will be removed from your presets.`, confirmLabel:'Delete', onConfirm:() => {
+          customPresets = customPresets.filter(x => x.id !== p.id);
+          saveCustomPresets(customPresets); renderPresets();
+          showToast(`"${p.name}" preset deleted.`, 'danger');
+        }});
+        return;
+      }
+      if(e.target.closest('#newPresetBtn')){ openPresetModal(null); return; }
+    });
+  }
+  renderPresets();
 
   // ---- data summary in footer ----
   function renderDataSummary(d){
@@ -2277,6 +2375,71 @@
     data.budget = v;
     saveData(data);
     renderAll();
+  });
+
+  // ---- preset create / edit modal ----
+  let presetEditId = null;
+  function openPresetModal(id){
+    presetEditId = id || null;
+    const p = id ? customPresets.find(x => x.id === id) : null;
+    const isEdit = !!p;
+    document.getElementById('presetModalTitle').textContent = isEdit ? 'Edit preset' : 'New preset';
+    document.getElementById('presetName').value = p ? p.name : '';
+    document.getElementById('presetFamily').value = p ? p.family : 50;
+    document.getElementById('presetEssential').value = p ? p.essential : 30;
+    document.getElementById('presetLifestyle').value = p ? p.lifestyle : 20;
+    document.getElementById('presetSavings').value = p ? p.savings : 0;
+    updatePresetTotal();
+    setBodyScrollLock(true);
+    presetModal.classList.remove('hidden');
+    presetModal.classList.add('flex');
+    presetModal.classList.add('is-open');
+  }
+  function closePresetModal(){
+    presetModal.classList.remove('is-open');
+    presetModal.classList.add('hidden');
+    presetModal.classList.remove('flex');
+    setBodyScrollLock(false);
+    restoreFocus();
+  }
+  function updatePresetTotal(){
+    const sum = ['Family','Essential','Lifestyle','Savings'].reduce((s, k) => s + (parseFloat(document.getElementById('preset' + k).value) || 0), 0);
+    const el = document.getElementById('presetTotal');
+    if(!el) return;
+    el.textContent = round1(sum) + '%';
+    el.style.color = Math.abs(sum - 100) < 0.05 ? 'var(--sage)' : 'var(--amber)';
+  }
+  const presetModal = document.getElementById('presetModal');
+  document.getElementById('closePresetBtn').addEventListener('click', closePresetModal);
+  presetModal.addEventListener('click', (e) => { if(e.target === presetModal) closePresetModal(); });
+  ['Family','Essential','Lifestyle','Savings'].forEach(k => {
+    document.getElementById('preset' + k).addEventListener('input', updatePresetTotal);
+  });
+  document.getElementById('presetSaveBtn').addEventListener('click', () => {
+    const name = document.getElementById('presetName').value.trim();
+    if(!name){ showToast('Give your preset a name.', 'danger'); return; }
+    const vals = {
+      family: Math.max(0, round1(parseFloat(document.getElementById('presetFamily').value) || 0)),
+      essential: Math.max(0, round1(parseFloat(document.getElementById('presetEssential').value) || 0)),
+      lifestyle: Math.max(0, round1(parseFloat(document.getElementById('presetLifestyle').value) || 0)),
+      savings: Math.max(0, round1(parseFloat(document.getElementById('presetSavings').value) || 0)),
+    };
+    const total = vals.family + vals.essential + vals.lifestyle + vals.savings;
+    if(total <= 0){ showToast('At least one value must be above 0.', 'danger'); return; }
+    if(presetEditId){
+      const idx = customPresets.findIndex(x => x.id === presetEditId);
+      if(idx !== -1) customPresets[idx] = { ...customPresets[idx], name, ...vals };
+      showToast(`"${name}" preset updated.`, 'success');
+    } else {
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'custom';
+      let id = slug, n = 1;
+      while(allPresets().some(p => p.id === id)){ id = slug + '-' + (++n); }
+      customPresets.push({ id, name, ...vals, builtin:false });
+      showToast(`"${name}" preset added.`, 'success');
+    }
+    saveCustomPresets(customPresets);
+    renderPresets();
+    closePresetModal();
   });
 
   // ---- rollover toggle ----
