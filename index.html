@@ -317,6 +317,9 @@
     .color-swatch-trigger{ width:36px; height:36px; }
   }
 </style>
+<!-- Google AdSense -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3322399863518049" crossorigin="anonymous"></script>
+<meta name="google-adsense-account" content="ca-pub-3322399863518049">
 </head>
 <body class="min-h-screen relative">
 
@@ -383,6 +386,23 @@
       </div>
     </div>
   </header>
+
+  <!-- INSTALL PROMPT BANNER (shown to new visitors not yet running the installed app) -->
+  <div id="installBanner" class="hidden px-5 sm:px-8">
+    <div class="max-w-[1400px] mx-auto mt-4 rounded-xl border px-4 py-3 flex items-center gap-3 fade-in-fast" style="background:var(--sage-soft); border-color:#CDE7DC;">
+      <span class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--sage);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold" style="color:#1F6B50;">Install Nerovault</p>
+        <p class="text-[11px] text-gray-500 mt-0.5">Add it to your home screen for quick, offline access — no app store needed.</p>
+      </div>
+      <button id="installBannerBtn" class="btn-primary text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex-shrink-0">Install</button>
+      <button id="installBannerClose" class="text-gray-400 hover:text-gray-600 transition-colors p-1.5 flex-shrink-0" title="Dismiss" aria-label="Dismiss install prompt">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </div>
 
   <main class="flex-1 px-5 sm:px-8 py-8 max-w-[1400px] mx-auto w-full">
 
@@ -1102,39 +1122,61 @@
     showInstallCta('Install app', 'Install Nerovault as an app');
   });
   if(installBtn){
-    installBtn.addEventListener('click', async () => {
-      if(deferredInstallPrompt){
-        deferredInstallPrompt.prompt();
-        await deferredInstallPrompt.userChoice;
-        deferredInstallPrompt = null;
-      }
-      // iOS Safari (no install event) — point the user to the OS share sheet instead.
-      if(isIOS()){
-        showToast('Tap Share, then “Add to Home Screen” to install Nerovault.', 'default');
-      }
-      dismissInstallCta();
-    });
+    installBtn.addEventListener('click', triggerInstall);
+  }
   }
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
     dismissInstallCta();
+    hideInstallBanner();
   });
   // iOS / unsupported browsers: surface a one-time CTA for brand-new visitors so the
   // install option is visible even without a native prompt API.
   function isIOS(){
     return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
-  if(!('onbeforeinstallprompt' in window) && isIOS()){
-    showInstallCta('Add to Home', 'Add Nerovault to your Home Screen');
+
+  // ---- install banner (popup under the header) ----
+  const installBanner = document.getElementById('installBanner');
+  function showInstallBanner(){
+    if(!installBanner || isStandalone || installDismissed) return;
+    installBanner.classList.remove('hidden');
   }
-  // Generic, always-visible CTA for brand-new browser visitors: if the OS hasn't already
-  // surfaced a native install prompt and the user isn't running the installed app, show
-  // the emphasized "Install app" button so people using Nerovault in a browser notice
-  // they can install it. When beforeinstallprompt later fires, it simply re-labels it.
+  function hideInstallBanner(){
+    if(installBanner) installBanner.classList.add('hidden');
+  }
+  function triggerInstall(){
+    if(deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.then(() => { deferredInstallPrompt = null; });
+    } else if(isIOS()){
+      showToast('Tap Share, then “Add to Home Screen” to install Nerovault.', 'default');
+    }
+    dismissInstallCta();
+    hideInstallBanner();
+  }
+  const installBannerBtn = document.getElementById('installBannerBtn');
+  if(installBannerBtn) installBannerBtn.addEventListener('click', triggerInstall);
+  const installBannerClose = document.getElementById('installBannerClose');
+  if(installBannerClose) installBannerClose.addEventListener('click', () => {
+    localStorage.setItem(INSTALL_DISMISSED_KEY, 'true');
+    hideInstallBanner(); hideInstallCta();
+  });
+
+  // Decide what to show new, non-installed visitors:
+  //  - iOS (no native prompt API): header CTA labelled "Add to Home" + banner.
+  //  - Other browsers: header "Install app" CTA + a dismissible banner popup. The banner
+  //    makes the install option obvious even if the user misses the small header button.
   const INSTALL_SEEN_PROMPT_KEY = 'nerovault_install_prompt_seen';
   let sawNativePrompt = localStorage.getItem(INSTALL_SEEN_PROMPT_KEY) === 'true';
-  if(!isStandalone && !installDismissed && !sawNativePrompt && !isIOS()){
-    showInstallCta('Install app', 'Install Nerovault as an app for easy access');
+  if(!isStandalone && !installDismissed){
+    if(isIOS()){
+      showInstallCta('Add to Home', 'Add Nerovault to your Home Screen');
+      showInstallBanner();
+    } else if(!sawNativePrompt){
+      showInstallCta('Install app', 'Install Nerovault as an app for easy access');
+      showInstallBanner();
+    }
   }
 
   const STORAGE_KEY = 'nerovault_data';

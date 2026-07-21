@@ -1,6 +1,6 @@
 // Nerovault service worker — caches the app shell so the tracker works fully offline.
 // Bump CACHE_VERSION whenever any cached file changes so clients pick up the update.
-const CACHE_VERSION = 'nerovault-v3';
+const CACHE_VERSION = 'nerovault-v4';
 const APP_SHELL = [
   './',
   './index.html',
